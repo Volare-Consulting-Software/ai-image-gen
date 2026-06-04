@@ -40,23 +40,8 @@
   --info: #1e6fb8;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --base: #0e0b17;
-    --surface: #1a1625;
-    --surface-sunken: #14101e;
-    --text-primary: #f1f0f4;
-    --text-secondary: #c9c5d2;
-    --text-muted: #9c97aa;
-    --border: #332c41;
-    --border-strong: #4a4257;
-    --accent-dim: #221a3a;
-    --success: #4fc987;
-    --warning: #e0a341;
-    --error: #f06664;
-    --info: #6ba8e5;
-  }
-}
+/* Light theme is the default. (Dark-mode tokens intentionally omitted so the
+   app stays light regardless of the OS prefers-color-scheme setting.) */
 
 /* Expose tokens as Tailwind utilities (bg-surface, text-text-primary, …). */
 @theme inline {
@@ -90,6 +75,7 @@
 
 html,
 body {
+  color-scheme: light;
   background: var(--base);
   color: var(--text-primary);
   font-family: var(--font-nunito), system-ui, -apple-system, "Segoe UI", sans-serif;
