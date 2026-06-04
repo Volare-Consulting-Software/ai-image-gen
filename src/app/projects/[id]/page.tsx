@@ -8,6 +8,7 @@ import { ClarifyForm } from "@/components/ClarifyForm";
 import { CandidatePicker } from "@/components/CandidatePicker";
 import { RefineLoopPanel } from "@/components/RefineLoopPanel";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
+import { PromptHistory } from "@/components/PromptHistory";
 import type { ClarifyingQuestion } from "@/types/clarification";
 
 export const dynamic = "force-dynamic";
@@ -107,10 +108,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         </section>
 
         <aside className="lg:border-l lg:border-border lg:pl-6">
-          <h2 className="mb-3 text-sm font-bold tracking-tight">History</h2>
-          <HistoryTimeline images={images} selectedImageId={project.selectedImageId} />
+          <h2 className="mb-3 text-sm font-bold tracking-tight">Images</h2>
+          <HistoryTimeline
+            projectId={project.id}
+            images={images}
+            selectedImageId={project.selectedImageId}
+          />
         </aside>
       </div>
+
+      <section>
+        <h2 className="mb-3 text-lg font-bold tracking-tight">Prompt history</h2>
+        <PromptHistory project={project} images={images} />
+      </section>
     </div>
   );
 }

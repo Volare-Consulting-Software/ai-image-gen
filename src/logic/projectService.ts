@@ -1,4 +1,4 @@
-import { GateKind, GateStatus, JobType, ProjectStatus } from "@/generated/prisma/enums";
+import { GateKind, GateStatus, ImageStage, JobType, ProjectStatus } from "@/generated/prisma/enums";
 import type { Project } from "@/generated/prisma/client";
 import { prisma } from "@/db/client";
 import { nudgeJobs } from "@/logic/events";
@@ -158,6 +158,33 @@ export class ProjectService {
       instructions: suggestions,
       auto: false,
     } satisfies ClaudeRefinePayload);
+  }
+
+  // ---- pick up from an earlier image --------------------------------------
+
+  // Resume the project from any historical image — for when a later path went
+  // the wrong way. Re-enters the refine loop that matches the image's stage so
+  // the user can continue (restyle or polish) from that point.
+  async pickUpFrom(projectId: string, imageId: string): Promise<void> {
+    await this.requireProject(projectId);
+    const image = await prisma.image.findFirst({ where: { id: imageId, projectId } });
+    if (!image) {
+      throw new Error(`Image not found in project: ${imageId}`);
+    }
+
+    const polishing = image.stage === ImageStage.claude_refine;
+    const status = polishing ? ProjectStatus.claude_refining : ProjectStatus.gemini_refining;
+    const gateKind = polishing ? GateKind.claude_refine : GateKind.gemini_refine;
+    const summary = polishing
+      ? "Continuing from an earlier image. Refine it further, or finish."
+      : "Continuing from an earlier image. Restyle it, or move on to polish.";
+
+    await this.resolvePendingGate(projectId, { action: "pick_up", imageId });
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { selectedImageId: imageId, status },
+    });
+    await createGate(projectId, gateKind, summary);
   }
 
   // ---- helpers ------------------------------------------------------------

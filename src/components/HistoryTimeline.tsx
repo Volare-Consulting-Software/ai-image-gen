@@ -1,5 +1,7 @@
 import type { Image } from "@/generated/prisma/client";
 
+import { PickUpButton } from "@/components/PickUpButton";
+
 const STAGE_LABEL: Record<string, string> = {
   candidate: "Option",
   gemini_refine: "Style edit",
@@ -7,9 +9,11 @@ const STAGE_LABEL: Record<string, string> = {
 };
 
 export function HistoryTimeline({
+  projectId,
   images,
   selectedImageId,
 }: {
+  projectId: string;
   images: Image[];
   selectedImageId: string | null;
 }) {
@@ -33,13 +37,14 @@ export function HistoryTimeline({
               className="h-14 w-14 rounded-md object-cover"
             />
           </a>
-          <div className="flex min-w-0 flex-col justify-center">
+          <div className="flex min-w-0 flex-col justify-center gap-0.5">
             <span className="text-xs font-semibold">
               #{img.roundIndex + 1} · {STAGE_LABEL[img.stage] ?? img.stage}
             </span>
             <span className="truncate text-xs text-text-muted" title={img.promptOrInstruction}>
               {img.promptOrInstruction}
             </span>
+            <PickUpButton projectId={projectId} imageId={img.id} />
           </div>
         </li>
       ))}
