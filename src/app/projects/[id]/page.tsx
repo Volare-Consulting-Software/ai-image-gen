@@ -9,6 +9,7 @@ import { CandidatePicker } from "@/components/CandidatePicker";
 import { RefineLoopPanel } from "@/components/RefineLoopPanel";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { PromptHistory } from "@/components/PromptHistory";
+import { DownloadControl } from "@/components/DownloadControl";
 import type { ClarifyingQuestion } from "@/types/clarification";
 
 export const dynamic = "force-dynamic";
@@ -57,24 +58,26 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               Something went wrong on the last step. Check the logs, then start a new project.
             </div>
           ) : project.status === "complete" && project.selectedImageId ? (
-            <div className="flex flex-col gap-3">
-              <div className="overflow-hidden rounded-xl border border-border bg-surface">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={`/api/images/${project.selectedImageId}`}
-                  alt="final"
-                  className="mx-auto max-h-[32rem] w-auto object-contain"
-                />
-              </div>
-              <a
-                href={`/api/images/${project.selectedImageId}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-on hover:bg-accent-hover"
-              >
-                Download final image
-              </a>
-            </div>
+            (() => {
+              const finalImage = images.find((img) => img.id === project.selectedImageId);
+              return (
+                <div className="flex flex-col gap-3">
+                  <div className="overflow-hidden rounded-xl border border-border bg-surface">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={`/api/images/${project.selectedImageId}`}
+                      alt="final"
+                      className="mx-auto max-h-[32rem] w-auto object-contain"
+                    />
+                  </div>
+                  <DownloadControl
+                    imageId={project.selectedImageId}
+                    shapeAvailable={finalImage?.shapeAvailable ?? false}
+                    transparentBgAvailable={finalImage?.transparentBgAvailable ?? false}
+                  />
+                </div>
+              );
+            })()
           ) : pendingGate?.kind === "clarify" ? (
             <ClarifyForm
               projectId={project.id}

@@ -26,6 +26,13 @@ model Image {
   // Monotonic round counter within the project (for ordering the timeline).
   roundIndex Int @default(0)
 
+  // Export-capability tags computed at generation time.
+  // shapeAvailable: simple/flat enough to vectorize to SVG.
+  // transparentBgAvailable: background is near-uniform white/black, so PNG can
+  // be made transparent.
+  shapeAvailable         Boolean @default(false)
+  transparentBgAvailable Boolean @default(false)
+
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

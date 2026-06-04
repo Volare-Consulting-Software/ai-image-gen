@@ -12,6 +12,7 @@ import type { Image, Job } from "@/generated/prisma/client";
 import { prisma } from "@/db/client";
 import { getImageGenerator, getImageRefiner, getStorage } from "@/container";
 import { bus, JOB_NUDGE } from "@/logic/events";
+import { analyzeImage } from "@/logic/imageAnalysis";
 import { createGate } from "@/logic/projectService";
 import { logger } from "@/lib/logger";
 import type { GeneratedImage } from "@/types/generation";
@@ -277,6 +278,9 @@ export class JobProcessor {
       roundIndex: number;
     },
   ): Promise<Image> {
+    // Tag export capabilities (shape/transparency) at generation time.
+    const tags = await analyzeImage(generated.data);
+
     // Create the row first to mint an id, then key the S3 object by that id.
     const row = await prisma.image.create({
       data: {
@@ -291,6 +295,8 @@ export class JobProcessor {
         parentImageId: meta.parentImageId,
         candidateGroupId: meta.candidateGroupId,
         roundIndex: meta.roundIndex,
+        shapeAvailable: tags.shapeAvailable,
+        transparentBgAvailable: tags.transparentBgAvailable,
       },
     });
     const key = `projects/${meta.projectId}/${row.id}.${extFor(generated.mimeType)}`;
