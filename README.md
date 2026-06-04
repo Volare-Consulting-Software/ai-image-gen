@@ -37,9 +37,18 @@ Next.js 16 (App Router) · React 19 · TypeScript · Tailwind v4 · Prisma 7 / P
 Requires Docker. Postgres + MinIO + the web app all run via compose.
 
 ```bash
-cp .env.example .env          # then fill in ANTHROPIC_API_KEY and GEMINI_API_KEY
+cp .env.example .env          # defaults to AI_PROVIDER=fixtures — no API keys needed
 docker compose up --build
 ```
+
+**Provider modes.** `AI_PROVIDER=fixtures` (the dev default) runs the entire
+flow offline at **zero cost** — canned clarifying questions plus
+sharp-generated placeholder images, with real image transforms on edit/refine so
+storage, history, and every UI branch are exercised. Flip to the real engines by
+setting `AI_PROVIDER=live` (or removing it) and supplying `GEMINI_API_KEY`
+(free-tier covers the clarify step; nano-banana image gen is ~$0.04/image) and
+`ANTHROPIC_API_KEY`. Iterate prompts/instructions cheaply in fixtures mode (and
+in your own interactive Claude Code session) before switching to live keys.
 
 - App: http://localhost:3000
 - MinIO console: http://localhost:9001 (minioadmin / minioadmin)
@@ -80,6 +89,7 @@ App Runner runs a **single container image**; Postgres is **RDS** (not in App Ru
    - **Min = Max = 1 instance** for the MVP — the in-process job runner and the Claude scratch dir assume a single instance.
    - **Instance role**: attach an IAM role with `s3:PutObject`/`s3:GetObject` on the bucket. With a role attached, leave `S3_ACCESS_KEY_ID`/`S3_SECRET_ACCESS_KEY` **unset** (the SDK uses the role).
    - **Environment** (use App Runner secrets for the keys):
+     - `AI_PROVIDER=live` (or omit — only `fixtures` enables the offline mock)
      - `DATABASE_URL`, `DIRECT_URL` → RDS
      - `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
      - `S3_BUCKET`, `S3_REGION` (leave `S3_ENDPOINT` and `S3_FORCE_PATH_STYLE` unset for real S3)

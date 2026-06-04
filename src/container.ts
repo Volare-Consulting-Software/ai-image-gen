@@ -6,8 +6,15 @@ import { ImageGeneratorToken, type ImageGenerator } from "@/interfaces/imageGene
 import { ImageRefinerToken, type ImageRefiner } from "@/interfaces/imageRefiner";
 import { StorageToken, type Storage } from "@/interfaces/storage";
 import { ClaudeImageRefiner } from "@/logic/claudeImageRefiner";
+import { FixtureImageGenerator } from "@/logic/fixtureImageGenerator";
+import { FixtureImageRefiner } from "@/logic/fixtureImageRefiner";
 import { GeminiImageGenerator } from "@/logic/geminiImageGenerator";
 import { S3Storage } from "@/logic/s3Storage";
+
+// AI_PROVIDER=fixtures runs the whole flow offline with zero API cost (canned
+// questions + sharp-generated placeholder images). Anything else (default) uses
+// the real Gemini + Claude engines. Storage is always S3/MinIO.
+const useFixtures = process.env.AI_PROVIDER === "fixtures";
 
 // Implementations are built lazily on first resolve (env is read in their
 // constructors), then cached for the process lifetime.
@@ -16,11 +23,15 @@ container.register<Storage>(StorageToken, {
 });
 
 container.register<ImageGenerator>(ImageGeneratorToken, {
-  useFactory: instanceCachingFactory<ImageGenerator>(() => new GeminiImageGenerator()),
+  useFactory: instanceCachingFactory<ImageGenerator>(() =>
+    useFixtures ? new FixtureImageGenerator() : new GeminiImageGenerator(),
+  ),
 });
 
 container.register<ImageRefiner>(ImageRefinerToken, {
-  useFactory: instanceCachingFactory<ImageRefiner>(() => new ClaudeImageRefiner()),
+  useFactory: instanceCachingFactory<ImageRefiner>(() =>
+    useFixtures ? new FixtureImageRefiner() : new ClaudeImageRefiner(),
+  ),
 });
 
 export function getStorage(): Storage {
