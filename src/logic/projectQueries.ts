@@ -5,6 +5,8 @@ import { prisma } from "@/db/client";
 export interface ProjectListItem {
   project: Project;
   imageCount: number;
+  // A few recent image ids for a montage preview on the gallery card.
+  recentImageIds: string[];
 }
 
 export interface ProjectDetail {
@@ -17,9 +19,17 @@ export interface ProjectDetail {
 export async function listProjects(): Promise<ProjectListItem[]> {
   const projects = await prisma.project.findMany({
     orderBy: { updatedAt: "desc" },
-    include: { _count: { select: { images: true } } },
+    include: {
+      _count: { select: { images: true } },
+      // Newest first; up to 9 for a 3×3 montage.
+      images: { select: { id: true }, orderBy: { createdAt: "desc" }, take: 9 },
+    },
   });
-  return projects.map((p) => ({ project: p, imageCount: p._count.images }));
+  return projects.map((p) => ({
+    project: p,
+    imageCount: p._count.images,
+    recentImageIds: p.images.map((img) => img.id),
+  }));
 }
 
 export async function getProjectDetail(projectId: string): Promise<ProjectDetail | null> {

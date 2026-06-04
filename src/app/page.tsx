@@ -26,24 +26,29 @@ export default async function Home() {
           <p className="text-sm text-text-muted">No projects yet. Create your first one above.</p>
         ) : (
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {projects.map(({ project, imageCount }) => (
+            {projects.map(({ project, imageCount, recentImageIds }) => (
               <li key={project.id}>
                 <Link
                   href={`/projects/${project.id}`}
                   className="block overflow-hidden rounded-xl border border-border bg-surface transition-colors hover:border-border-strong"
                 >
-                  <div className="flex aspect-video items-center justify-center bg-surface-sunken">
-                    {project.selectedImageId ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={`/api/images/${project.selectedImageId}`}
-                        alt={project.title}
-                        className="h-full w-full object-cover"
-                      />
-                    ) : (
+                  {recentImageIds.length === 0 ? (
+                    <div className="flex aspect-video items-center justify-center bg-surface-sunken">
                       <span className="text-xs font-medium text-text-muted">No image yet</span>
-                    )}
-                  </div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 gap-px bg-border">
+                      {recentImageIds.map((id) => (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          key={id}
+                          src={`/api/images/${id}`}
+                          alt={project.title}
+                          className="aspect-square w-full bg-surface-sunken object-cover"
+                        />
+                      ))}
+                    </div>
+                  )}
                   <div className="flex flex-col gap-2 p-3">
                     <span className="line-clamp-2 text-sm font-semibold">{project.title}</span>
                     <div className="flex items-center justify-between">
