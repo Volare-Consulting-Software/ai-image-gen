@@ -12,21 +12,41 @@ import type { GeneratedImage } from "@/types/generation";
 // inside the scratch cwd. Points at this project's node_modules.
 const PROJECT_NODE_MODULES = join(process.cwd(), "node_modules");
 
-const SYSTEM_PROMPT = `You are an expert image-retouching engineer. You improve the
-TECHNICAL quality of an existing image without changing its subject, composition,
-or artistic style. Focus on: sharpness/clarity, denoising, color balance and
-saturation, contrast/levels, and cleaning up jagged lines, edges, circles and
-shapes.
+// Candidate output files, in priority order, with their mime types. The agent
+// writes whichever format the requested operation calls for (e.g. PNG for
+// transparency, WebP/JPEG for a format conversion).
+const OUTPUT_CANDIDATES: Array<{ file: string; mimeType: string }> = [
+  { file: "output.png", mimeType: "image/png" },
+  { file: "output.webp", mimeType: "image/webp" },
+  { file: "output.jpg", mimeType: "image/jpeg" },
+  { file: "output.jpeg", mimeType: "image/jpeg" },
+];
+
+const SYSTEM_PROMPT = `You are an expert image engineer. You perform precise,
+deterministic edits to the TECHNICAL properties of an existing image without
+changing what it depicts or its artistic style. Your responsibilities include:
+
+- Sharpness / clarity, denoising, color balance, saturation, contrast and levels.
+- Cleaning up jagged lines, edges, circles and shapes.
+- Scaling / resizing and upscaling.
+- Format / type conversion (PNG, JPEG, WebP).
+- Background removal and transparency (alpha channel).
+- Layering / compositing (e.g. placing the subject on a new background or layer).
 
 You work entirely with command-line tools in the current directory:
 - Prefer a small Node script using the installed "sharp" library (cross-platform,
-  always available) for resize/sharpen/modulate/normalize/gamma operations.
-- ImageMagick ("magick" / "convert") is also available for more advanced filters.
+  always available) for resize/sharpen/modulate/normalize/gamma/flatten/extend
+  and alpha operations.
+- ImageMagick ("magick" / "convert") is also available for more advanced filters,
+  compositing, and background removal.
 
 Hard rules:
 - The input image is the file ./input.png in the current directory. Read it to see it.
-- Produce exactly one result written to ./output.png in the current directory.
-- Do NOT change what the picture depicts or its style — only refine quality.
+- Write exactly one result to ./output.png — UNLESS the request is a format change,
+  in which case write ./output.jpg or ./output.webp instead. Use PNG (or WebP) when
+  transparency is needed; never write a transparent image as JPEG.
+- Do NOT change what the picture depicts or its artistic style — only its technical
+  properties.
 - Do NOT access the network. When finished, briefly state what you changed.`;
 
 export class ClaudeImageRefiner implements ImageRefiner {
@@ -47,15 +67,15 @@ export class ClaudeImageRefiner implements ImageRefiner {
     // stable; the source bytes keep their original encoding inside the PNG-named
     // file (sharp/ImageMagick sniff the real format from content).
     const inputPath = join(scratch, "input.png");
-    const outputPath = join(scratch, "output.png");
     await writeFile(inputPath, input.source);
 
-    const prompt = `Refine ./input.png and save the improved image as ./output.png.
+    const prompt = `Refine ./input.png and save the result as ./output.png (or
+./output.jpg / ./output.webp if the request is a format change).
 
-Refinement guidance:
+What to do:
 ${input.instructions}
 
-Read ./input.png first to assess it, then apply the improvements and write ./output.png.`;
+Read ./input.png first to assess it, then apply the change and write the output file.`;
 
     const options: Options = {
       cwd: scratch,
@@ -87,11 +107,14 @@ Read ./input.png first to assess it, then apply the improvements and write ./out
         }
       }
 
-      const data = await readFile(outputPath).catch(() => null);
-      if (!data) {
-        throw new Error("Claude refinement did not produce output.png");
+      // Pick whichever output the agent produced (supports format conversion).
+      for (const candidate of OUTPUT_CANDIDATES) {
+        const data = await readFile(join(scratch, candidate.file)).catch(() => null);
+        if (data) {
+          return { data, mimeType: candidate.mimeType };
+        }
       }
-      return { data, mimeType: input.mimeType };
+      throw new Error("Claude refinement did not produce an output image");
     } finally {
       // Best-effort cleanup of this round's scratch dir.
       await rm(scratch, { recursive: true, force: true }).catch(() => {});

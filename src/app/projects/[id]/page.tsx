@@ -14,9 +14,9 @@ export const dynamic = "force-dynamic";
 
 const WORKING_LABEL: Record<string, string> = {
   clarify: "Reviewing your prompt…",
-  generate: "Generating 3 options with Gemini…",
-  gemini_edit: "Applying your changes with Gemini…",
-  claude_refine: "Refining with Claude…",
+  generate: "Generating options…",
+  gemini_edit: "Applying your changes…",
+  claude_refine: "Refining…",
 };
 
 export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -32,32 +32,32 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
       <ProjectPoller active={working} />
 
       <div className="flex flex-col gap-1">
-        <Link href="/" className="text-sm text-zinc-500 hover:underline">
+        <Link href="/" className="text-sm text-text-secondary hover:text-text-primary hover:underline">
           ← All projects
         </Link>
         <div className="flex items-center gap-3">
-          <h1 className="text-xl font-semibold tracking-tight">{project.title}</h1>
+          <h1 className="text-xl font-extrabold tracking-tight">{project.title}</h1>
           <StatusBadge status={project.status} />
         </div>
-        <p className="text-sm text-zinc-500">{project.refinedPrompt ?? project.originalPrompt}</p>
+        <p className="text-sm text-text-secondary">{project.refinedPrompt ?? project.originalPrompt}</p>
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_18rem]">
         <section className="min-w-0">
           {working ? (
-            <div className="flex items-center gap-3 rounded-lg border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900">
-              <span className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-400 border-t-transparent" />
-              <span className="text-sm text-zinc-600 dark:text-zinc-300">
+            <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-6">
+              <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
+              <span className="text-sm text-text-secondary">
                 {WORKING_LABEL[activeJob?.type ?? ""] ?? "Working…"}
               </span>
             </div>
           ) : project.status === "error" ? (
-            <div className="rounded-lg border border-red-300 bg-red-50 p-6 text-sm text-red-800 dark:border-red-900 dark:bg-red-950/40 dark:text-red-300">
-              Something went wrong on the last step. Check the server logs, then create a new project.
+            <div className="rounded-xl border border-[var(--error)] bg-surface p-6 text-sm text-error">
+              Something went wrong on the last step. Check the logs, then start a new project.
             </div>
           ) : project.status === "complete" && project.selectedImageId ? (
             <div className="flex flex-col gap-3">
-              <div className="overflow-hidden rounded-lg border border-green-300 bg-white dark:border-green-900 dark:bg-zinc-900">
+              <div className="overflow-hidden rounded-xl border border-border bg-surface">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={`/api/images/${project.selectedImageId}`}
@@ -69,7 +69,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
                 href={`/api/images/${project.selectedImageId}`}
                 target="_blank"
                 rel="noreferrer"
-                className="self-start rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-500"
+                className="inline-flex w-fit items-center justify-center gap-2 rounded-lg bg-accent px-4 py-2 text-sm font-semibold text-accent-on hover:bg-accent-hover"
               >
                 Download final image
               </a>
@@ -87,18 +87,18 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               )}
             />
           ) : pendingGate?.kind === "gemini_refine" && project.selectedImageId ? (
-            <RefineLoopPanel projectId={project.id} imageId={project.selectedImageId} variant="gemini" />
+            <RefineLoopPanel projectId={project.id} imageId={project.selectedImageId} variant="style" />
           ) : pendingGate?.kind === "claude_refine" && project.selectedImageId ? (
-            <RefineLoopPanel projectId={project.id} imageId={project.selectedImageId} variant="claude" />
+            <RefineLoopPanel projectId={project.id} imageId={project.selectedImageId} variant="polish" />
           ) : (
-            <div className="rounded-lg border border-zinc-200 bg-white p-6 text-sm text-zinc-500 dark:border-zinc-800 dark:bg-zinc-900">
+            <div className="rounded-xl border border-border bg-surface p-6 text-sm text-text-muted">
               Nothing to do right now.
             </div>
           )}
         </section>
 
-        <aside className="lg:border-l lg:border-zinc-200 lg:pl-6 dark:lg:border-zinc-800">
-          <h2 className="mb-3 text-sm font-semibold tracking-tight">History</h2>
+        <aside className="lg:border-l lg:border-border lg:pl-6">
+          <h2 className="mb-3 text-sm font-bold tracking-tight">History</h2>
           <HistoryTimeline images={images} selectedImageId={project.selectedImageId} />
         </aside>
       </div>

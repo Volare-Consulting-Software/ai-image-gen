@@ -23,7 +23,14 @@ import type {
 } from "@/types/jobs";
 
 const POLL_INTERVAL_MS = 2000;
-const NUM_CANDIDATES = 3;
+const DEFAULT_CANDIDATE_COUNT = 3;
+
+// How many candidates to generate in the CHOOSING step. Override with
+// CANDIDATE_COUNT (e.g. 1 while testing to save tokens).
+function candidateCount(): number {
+  const n = Number(process.env.CANDIDATE_COUNT);
+  return Number.isFinite(n) && n >= 1 ? Math.floor(n) : DEFAULT_CANDIDATE_COUNT;
+}
 
 function extFor(mimeType: string): string {
   if (mimeType.includes("jpeg") || mimeType.includes("jpg")) return "jpg";
@@ -149,7 +156,7 @@ export class JobProcessor {
 
   private async handleGenerate(job: Job): Promise<string[]> {
     const { prompt } = job.payload as unknown as GeneratePayload;
-    const candidates = await getImageGenerator().generateCandidates(prompt, NUM_CANDIDATES);
+    const candidates = await getImageGenerator().generateCandidates(prompt, candidateCount());
     const groupId = randomUUID();
     const round = await this.nextRound(job.projectId);
 
