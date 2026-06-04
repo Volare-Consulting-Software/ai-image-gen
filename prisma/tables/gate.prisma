@@ -1,0 +1,30 @@
+// A pending human-in-the-loop decision: clarifying questions, candidate choice,
+// or a refinement feedback loop. Ported (lightly) from pilota-app's gate model.
+model Gate {
+  id        String @id @default(cuid(2))
+  projectId String
+
+  kind    GateKind
+  summary String
+
+  // Shape depends on kind:
+  //   clarify       -> Array<{ question, why, options?: string[] }>
+  //   choose        -> Array<{ id: imageId }>  (the candidates on offer)
+  //   gemini_refine -> [] (actions are fixed: happy / more-suggestions)
+  //   claude_refine -> [] (actions are fixed: done / refine-further)
+  options Json @default("[]")
+
+  // Append-only log of rejected options + the feedback the user left, so the
+  // engine can "re-think" with full context. Array<{ comment, submittedAt, prior }>.
+  feedbackHistory Json @default("[]")
+
+  status            GateStatus @default(pending)
+  resolutionPayload Json?
+  resolvedAt        DateTime?  @db.Timestamptz(6)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId, status])
+}

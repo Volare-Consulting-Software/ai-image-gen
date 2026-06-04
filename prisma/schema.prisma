@@ -1,0 +1,20 @@
+// Prisma schema for ai-image-gen.
+//
+// Multi-file schema (Prisma 7): this "main" file holds only the generator and
+// datasource blocks. Enums live in enums.prisma; each model is defined in its
+// own file under tables/. Prisma merges every .prisma file under the schema
+// folder configured in prisma.config.ts (`schema: "prisma"`).
+//
+// Connection URLs are NOT in this file (Prisma 7): the CLI/Migrate URL lives in
+// prisma.config.ts, and the runtime Prisma Client gets its URL via the PrismaPg
+// adapter in src/db/client.ts.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+  runtime  = "nodejs"
+}
+
+datasource db {
+  provider = "postgresql"
+}

@@ -1,0 +1,78 @@
+# Local development stack: the web app + Postgres + MinIO (S3-compatible).
+# Copy .env.example to .env and fill in ANTHROPIC_API_KEY / GEMINI_API_KEY first,
+# then `docker compose up --build`. App on http://localhost:3000, MinIO console
+# on http://localhost:9001 (minioadmin / minioadmin).
+
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: aiimagegen
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: minio/minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - miniodata:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: create the bucket the app expects.
+  createbucket:
+    image: minio/mc
+    depends_on:
+      minio:
+        condition: service_started
+    entrypoint: >
+      sh -c "
+      until mc alias set local http://minio:9000 minioadmin minioadmin; do sleep 1; done;
+      mc mb -p local/ai-image-gen || true;
+      exit 0;
+      "
+
+  web:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+      createbucket:
+        condition: service_completed_successfully
+    # API keys + model overrides come from .env; host/cred wiring is set below.
+    env_file:
+      - .env
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://postgres:postgres@db:5432/aiimagegen?schema=public
+      DIRECT_URL: postgresql://postgres:postgres@db:5432/aiimagegen?schema=public
+      S3_BUCKET: ai-image-gen
+      S3_REGION: us-east-1
+      S3_ENDPOINT: http://minio:9000
+      S3_FORCE_PATH_STYLE: "true"
+      S3_ACCESS_KEY_ID: minioadmin
+      S3_SECRET_ACCESS_KEY: minioadmin
+    ports:
+      - "3000:3000"
+
+volumes:
+  pgdata:
+  miniodata:
