@@ -2,6 +2,7 @@ import { GateKind, GateStatus, JobType, ProjectStatus } from "@/generated/prisma
 import type { Project } from "@/generated/prisma/client";
 import { prisma } from "@/db/client";
 import { nudgeJobs } from "@/logic/events";
+import type { ClarificationAnswer } from "@/types/clarification";
 import type {
   ClarifyPayload,
   ClaudeRefinePayload,
@@ -18,11 +19,6 @@ export const DEFAULT_REFINE_BRIEF =
 function deriveTitle(prompt: string): string {
   const trimmed = prompt.trim().replace(/\s+/g, " ");
   return trimmed.length > 60 ? `${trimmed.slice(0, 57)}…` : trimmed || "Untitled project";
-}
-
-export interface ClarificationAnswer {
-  question: string;
-  answer: string;
 }
 
 // State authority for user/API-driven transitions. Engine-result transitions
@@ -46,14 +42,18 @@ export class ProjectService {
 
   async submitClarifications(projectId: string, answers: ClarificationAnswer[]): Promise<void> {
     const project = await this.requireProject(projectId);
-    const refinedPrompt = this.composeRefinedPrompt(project.originalPrompt, answers);
 
     await this.resolvePendingGate(projectId, { answers });
     await prisma.project.update({
       where: { id: projectId },
-      data: { refinedPrompt, status: ProjectStatus.generating },
+      data: { status: ProjectStatus.generating },
     });
-    await this.enqueue(projectId, JobType.generate, { prompt: refinedPrompt } satisfies GeneratePayload);
+    // The generate job synthesizes original + answers into a vivid prompt (and
+    // records it on the project) before generating candidates.
+    await this.enqueue(projectId, JobType.generate, {
+      original: project.originalPrompt,
+      answers,
+    } satisfies GeneratePayload);
   }
 
   // ---- CHOOSING (3-up) ----------------------------------------------------
@@ -167,13 +167,6 @@ export class ProjectService {
       data: { projectId, type, payload: payload as object },
     });
     nudgeJobs();
-  }
-
-  private composeRefinedPrompt(original: string, answers: ClarificationAnswer[]): string {
-    const relevant = answers.filter((a) => a.answer.trim().length > 0);
-    if (relevant.length === 0) return original;
-    const details = relevant.map((a) => `- ${a.question} ${a.answer}`).join("\n");
-    return `${original}\n\nAdditional details:\n${details}`;
   }
 
   private async resolvePendingGate(projectId: string, payload: unknown): Promise<void> {

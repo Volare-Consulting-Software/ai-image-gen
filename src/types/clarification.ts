@@ -13,3 +13,9 @@ export interface ClarificationResult {
   // Up to a few questions; empty when the prompt is already clear.
   questions: ClarifyingQuestion[];
 }
+
+// A user's answer to one clarifying question.
+export interface ClarificationAnswer {
+  question: string;
+  answer: string;
+}

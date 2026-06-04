@@ -8,9 +8,12 @@ import { Button } from "@/components/ui/Button";
 export function CandidatePicker({
   projectId,
   candidateIds,
+  priorImages = [],
 }: {
   projectId: string;
   candidateIds: string[];
+  // Earlier images in the project, shown as read-only context while choosing.
+  priorImages?: { id: string; label: string }[];
 }) {
   const router = useRouter();
   const [selected, setSelected] = useState<string | null>(
@@ -125,6 +128,31 @@ export function CandidatePicker({
           </div>
         )}
       </div>
+
+      {priorImages.length > 0 && (
+        <div>
+          <p className="mb-2 text-xs font-semibold text-text-muted">Considered so far</p>
+          <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+            {priorImages.map((img) => (
+              <a
+                key={img.id}
+                href={`/api/images/${img.id}`}
+                target="_blank"
+                rel="noreferrer"
+                title={img.label}
+                className="overflow-hidden rounded-lg border border-border"
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/images/${img.id}`}
+                  alt={img.label}
+                  className="aspect-square w-full object-cover opacity-80 transition-opacity hover:opacity-100"
+                />
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -3,8 +3,14 @@ export interface ClarifyPayload {
   prompt: string;
 }
 
+import type { ClarificationAnswer } from "@/types/clarification";
+
 export interface GeneratePayload {
-  prompt: string;
+  // A ready-to-use prompt (non-vague path, or "try again"). When absent, the
+  // generate job synthesizes one from `original` + `answers` first.
+  prompt?: string;
+  original?: string;
+  answers?: ClarificationAnswer[];
 }
 
 export interface GeminiEditPayload {

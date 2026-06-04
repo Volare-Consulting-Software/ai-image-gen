@@ -2,17 +2,41 @@ import { GoogleGenAI, Type, type GenerateContentResponse } from "@google/genai";
 
 import type { ImageGenerator } from "@/interfaces/imageGenerator";
 import { logger } from "@/lib/logger";
-import type { ClarificationResult } from "@/types/clarification";
+import type { ClarificationAnswer, ClarificationResult } from "@/types/clarification";
 import type { GeneratedImage } from "@/types/generation";
 
-const CLARIFY_SYSTEM = `You help a user sharpen a prompt for an AI image generator.
-Decide whether the prompt is too vague to produce a confident result.
+const DEFAULT_MAX_QUESTIONS = 5;
 
-Only ask questions that would SIGNIFICANTLY change the resulting image — things like:
-subject & key elements, composition/framing, art style or medium, mood/tone, color
-palette, setting/background, and intended use or aspect ratio. Do NOT ask filler
-questions. Ask at most 3. If the prompt is already specific enough to generate a
-strong image, set isVague to false and return an empty questions array.`;
+function clarifySystem(maxQuestions: number): string {
+  return `You help a user turn a rough idea into a precise prompt for an AI image
+generator. Inspect the prompt and find what is UNDERSPECIFIED, then ask focused
+questions — each only if it would meaningfully change the resulting image — covering
+whichever of these dimensions are unclear:
+- Subject & key elements (what exactly is in the image)
+- Setting / background / context
+- Composition & framing (close-up vs wide, angle, where the subject sits)
+- Art style / medium / rendering (photo, flat illustration, 3D, watercolor, line art…)
+- Mood & lighting
+- Color palette
+- Level of detail / complexity (minimal vs intricate)
+- Any text, logo, or branding to include
+- Intended use & aspect ratio (icon, banner, poster, square…)
+- Anything to avoid
+
+Rules:
+- Ask up to ${maxQuestions} questions — but only ones that genuinely matter for THIS prompt.
+- A short or generic prompt is vague: lean toward asking. Only set isVague=false when the
+  prompt is already detailed enough to produce a confident, specific result.
+- For every question, give a one-line "why" and 3–5 concrete "options" the user can pick from.
+- Keep questions short and concrete.`;
+}
+
+const REFINE_SYSTEM = `You are a prompt engineer for an AI image generator. Combine the
+user's original idea with their answers into ONE vivid, specific, self-contained image
+prompt. Preserve their intent and weave in every chosen detail (subject, style,
+composition, mood, lighting, color, setting, level of detail, aspect/use). Resolve
+vagueness with concrete language. Output ONLY the final prompt — no preamble, no quotes,
+no explanation.`;
 
 export class GeminiImageGenerator implements ImageGenerator {
   private readonly ai: GoogleGenAI;
@@ -30,11 +54,12 @@ export class GeminiImageGenerator implements ImageGenerator {
   }
 
   async clarify(prompt: string): Promise<ClarificationResult> {
+    const maxQuestions = Number(process.env.CLARIFY_MAX_QUESTIONS) || DEFAULT_MAX_QUESTIONS;
     const response = await this.ai.models.generateContent({
       model: this.textModel,
       contents: `Prompt: "${prompt}"`,
       config: {
-        systemInstruction: CLARIFY_SYSTEM,
+        systemInstruction: clarifySystem(maxQuestions),
         responseMimeType: "application/json",
         responseSchema: {
           type: Type.OBJECT,
@@ -67,11 +92,34 @@ export class GeminiImageGenerator implements ImageGenerator {
       const parsed = JSON.parse(text) as ClarificationResult;
       return {
         isVague: Boolean(parsed.isVague),
-        questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, 3) : [],
+        questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, maxQuestions) : [],
       };
     } catch (err) {
       logger.warn({ err: err instanceof Error ? err.message : String(err) }, "clarify parse failed");
       return { isVague: false, questions: [] };
+    }
+  }
+
+  async refinePrompt(original: string, answers: ClarificationAnswer[]): Promise<string> {
+    const answered = answers.filter((a) => a.answer.trim().length > 0);
+    const qa = answered.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join("\n");
+    const fallback = qa ? `${original}\n\n${qa}` : original;
+    if (answered.length === 0) return original;
+
+    try {
+      const response = await this.ai.models.generateContent({
+        model: this.textModel,
+        contents: `Original idea: ${original}\n\nUser's answers:\n${qa}`,
+        config: { systemInstruction: REFINE_SYSTEM },
+      });
+      const text = response.text?.trim();
+      return text && text.length > 0 ? text : fallback;
+    } catch (err) {
+      logger.warn(
+        { err: err instanceof Error ? err.message : String(err) },
+        "refinePrompt failed; falling back to concatenation",
+      );
+      return fallback;
     }
   }
 

@@ -155,8 +155,22 @@ export class JobProcessor {
   }
 
   private async handleGenerate(job: Job): Promise<string[]> {
-    const { prompt } = job.payload as unknown as GeneratePayload;
-    const candidates = await getImageGenerator().generateCandidates(prompt, candidateCount());
+    const payload = job.payload as unknown as GeneratePayload;
+    const generator = getImageGenerator();
+
+    // Synthesize a vivid prompt from the clarifying answers when needed, and
+    // record it on the project so it's visible in the UI.
+    let prompt = payload.prompt;
+    if (!prompt && payload.answers) {
+      prompt = await generator.refinePrompt(payload.original ?? "", payload.answers);
+      await prisma.project.update({
+        where: { id: job.projectId },
+        data: { refinedPrompt: prompt },
+      });
+    }
+    if (!prompt) prompt = payload.original ?? "";
+
+    const candidates = await generator.generateCandidates(prompt, candidateCount());
     const groupId = randomUUID();
     const round = await this.nextRound(job.projectId);
 

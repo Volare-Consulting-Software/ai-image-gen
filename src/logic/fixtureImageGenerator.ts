@@ -1,7 +1,7 @@
 import sharp from "sharp";
 
 import type { ImageGenerator } from "@/interfaces/imageGenerator";
-import type { ClarificationResult } from "@/types/clarification";
+import type { ClarificationAnswer, ClarificationResult } from "@/types/clarification";
 import type { GeneratedImage } from "@/types/generation";
 
 const SIZE = 768;
@@ -44,8 +44,25 @@ export class FixtureImageGenerator implements ImageGenerator {
           why: "Palette and mood set the emotional read of the image.",
           options: ["warm & vibrant", "cool & calm", "high-contrast", "muted pastels"],
         },
+        {
+          question: "What composition or framing?",
+          why: "Framing decides what's emphasized and how the subject sits in the frame.",
+          options: ["close-up", "wide shot", "centered", "rule of thirds"],
+        },
+        {
+          question: "Intended use / aspect ratio?",
+          why: "Shape and use change the layout and level of detail.",
+          options: ["square icon", "wide banner", "poster", "social post"],
+        },
       ],
     };
+  }
+
+  async refinePrompt(original: string, answers: ClarificationAnswer[]): Promise<string> {
+    const answered = answers.filter((a) => a.answer.trim().length > 0);
+    if (answered.length === 0) return original;
+    const qa = answered.map((a) => `${a.question} ${a.answer}`).join("; ");
+    return `${original} — ${qa}`;
   }
 
   async generateCandidates(_prompt: string, count: number): Promise<GeneratedImage[]> {

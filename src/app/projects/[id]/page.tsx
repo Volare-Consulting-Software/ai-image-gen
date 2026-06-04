@@ -80,12 +80,21 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
               questions={pendingGate.options as unknown as ClarifyingQuestion[]}
             />
           ) : pendingGate?.kind === "choose" ? (
-            <CandidatePicker
-              projectId={project.id}
-              candidateIds={(pendingGate.options as unknown as { imageId: string }[]).map(
+            (() => {
+              const candidateIds = (pendingGate.options as unknown as { imageId: string }[]).map(
                 (o) => o.imageId,
-              )}
-            />
+              );
+              const priorImages = images
+                .filter((img) => !candidateIds.includes(img.id))
+                .map((img) => ({ id: img.id, label: `#${img.roundIndex + 1} ${img.stage}` }));
+              return (
+                <CandidatePicker
+                  projectId={project.id}
+                  candidateIds={candidateIds}
+                  priorImages={priorImages}
+                />
+              );
+            })()
           ) : pendingGate?.kind === "gemini_refine" && project.selectedImageId ? (
             <RefineLoopPanel projectId={project.id} imageId={project.selectedImageId} variant="style" />
           ) : pendingGate?.kind === "claude_refine" && project.selectedImageId ? (
