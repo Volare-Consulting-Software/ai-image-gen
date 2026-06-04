@@ -83,6 +83,20 @@ body {
   font-feature-settings: "kern", "liga", "calt";
 }
 
+/* Form controls don't inherit `color` by default — set it explicitly so typed
+   text is the near-black brand ink (not the OS system color). */
+input,
+textarea,
+select {
+  color: var(--text-primary);
+  background-color: var(--base);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--text-muted);
+}
+
 ::selection {
   background: var(--accent-dim);
   color: var(--accent-pressed);
