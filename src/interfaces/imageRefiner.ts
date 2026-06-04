@@ -2,6 +2,8 @@ import type { GeneratedImage } from "@/types/generation";
 
 export interface RefineInput {
   projectId: string;
+  // The image being refined (so a handoff task can reference it).
+  sourceImageId: string;
   // Monotonic round number — used to isolate the scratch working directory.
   roundIndex: number;
   source: Buffer;

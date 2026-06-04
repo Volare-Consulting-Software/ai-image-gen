@@ -238,6 +238,7 @@ export class JobProcessor {
 
     const refined = await getImageRefiner().refine({
       projectId: job.projectId,
+      sourceImageId,
       roundIndex: round,
       source: sourceBytes,
       mimeType: source.mimeType,
