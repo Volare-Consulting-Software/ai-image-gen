@@ -11,10 +11,17 @@ import { FixtureImageRefiner } from "@/logic/fixtureImageRefiner";
 import { GeminiImageGenerator } from "@/logic/geminiImageGenerator";
 import { S3Storage } from "@/logic/s3Storage";
 
-// AI_PROVIDER=fixtures runs the whole flow offline with zero API cost (canned
-// questions + sharp-generated placeholder images). Anything else (default) uses
-// the real Gemini + Claude engines. Storage is always S3/MinIO.
-const useFixtures = process.env.AI_PROVIDER === "fixtures";
+// Provider mode is resolved per engine so you can mix live + fixtures — e.g.
+// test real Gemini (nano-banana) while keeping Claude on the free fixture pass
+// until you have an Anthropic key. `AI_PROVIDER` is the default for both;
+// `GEMINI_PROVIDER` / `CLAUDE_PROVIDER` override individually. Default: live.
+// "fixtures" runs offline with zero API cost. Storage is always S3/MinIO.
+function usesFixtures(engineOverride: string | undefined): boolean {
+  return (engineOverride ?? process.env.AI_PROVIDER ?? "live") === "fixtures";
+}
+
+const geminiFixtures = usesFixtures(process.env.GEMINI_PROVIDER);
+const claudeFixtures = usesFixtures(process.env.CLAUDE_PROVIDER);
 
 // Implementations are built lazily on first resolve (env is read in their
 // constructors), then cached for the process lifetime.
@@ -24,13 +31,13 @@ container.register<Storage>(StorageToken, {
 
 container.register<ImageGenerator>(ImageGeneratorToken, {
   useFactory: instanceCachingFactory<ImageGenerator>(() =>
-    useFixtures ? new FixtureImageGenerator() : new GeminiImageGenerator(),
+    geminiFixtures ? new FixtureImageGenerator() : new GeminiImageGenerator(),
   ),
 });
 
 container.register<ImageRefiner>(ImageRefinerToken, {
   useFactory: instanceCachingFactory<ImageRefiner>(() =>
-    useFixtures ? new FixtureImageRefiner() : new ClaudeImageRefiner(),
+    claudeFixtures ? new FixtureImageRefiner() : new ClaudeImageRefiner(),
   ),
 });
 
