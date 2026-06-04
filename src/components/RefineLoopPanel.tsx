@@ -64,6 +64,11 @@ export function RefineLoopPanel({
           <Button disabled={pending} onClick={() => post({ action: advanceAction })}>
             {advanceLabel}
           </Button>
+          {variant === "style" && (
+            <Button variant="secondary" disabled={pending} onClick={() => post({ action: "finish" })}>
+              Use as-is (finish)
+            </Button>
+          )}
           <Button variant="secondary" disabled={pending} onClick={() => setOpen((v) => !v)}>
             {moreLabel}
           </Button>

@@ -7,6 +7,7 @@ import { projectService } from "@/logic/projectService";
 // image loop; `done`/`refine` belong to the Claude technical loop.
 const refineSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("happy") }),
+  z.object({ action: z.literal("finish") }),
   z.object({
     action: z.literal("more"),
     suggestions: z.string().trim().min(1, "Describe what to change").max(2000),
@@ -33,6 +34,9 @@ export async function POST(
   switch (data.action) {
     case "happy":
       await projectService.geminiHappy(id);
+      break;
+    case "finish":
+      await projectService.acceptAsFinal(id);
       break;
     case "more":
       await projectService.geminiMore(id, data.suggestions);

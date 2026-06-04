@@ -160,6 +160,23 @@ export class ProjectService {
     } satisfies ClaudeRefinePayload);
   }
 
+  // ---- accept as final (skip polishing) -----------------------------------
+
+  // Complete the project with the given image (or the current selection) without
+  // running the polish stage — for when the user likes it as-is.
+  async acceptAsFinal(projectId: string, imageId?: string): Promise<void> {
+    const project = await this.requireProject(projectId);
+    const finalId = imageId ?? project.selectedImageId;
+    if (!finalId) {
+      throw new Error(`Project ${projectId} has no image to finalize`);
+    }
+    await this.resolvePendingGate(projectId, { action: "finish", imageId: finalId });
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { selectedImageId: finalId, status: ProjectStatus.complete },
+    });
+  }
+
   // ---- pick up from an earlier image --------------------------------------
 
   // Resume the project from any historical image — for when a later path went

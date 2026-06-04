@@ -7,6 +7,7 @@ import { projectService } from "@/logic/projectService";
 // suggestions (loops back to Gemini), or reject all three and regenerate.
 const selectSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("as_is"), imageId: z.string().min(1) }),
+  z.object({ action: z.literal("finish"), imageId: z.string().min(1) }),
   z.object({
     action: z.literal("with_suggestions"),
     imageId: z.string().min(1),
@@ -30,6 +31,9 @@ export async function POST(
   switch (data.action) {
     case "as_is":
       await projectService.selectAsIs(id, data.imageId);
+      break;
+    case "finish":
+      await projectService.acceptAsFinal(id, data.imageId);
       break;
     case "with_suggestions":
       await projectService.selectWithSuggestions(id, data.imageId, data.suggestions);

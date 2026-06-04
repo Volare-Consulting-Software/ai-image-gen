@@ -64,7 +64,14 @@ export function CandidatePicker({
             <p className="text-sm text-text-secondary">What next with the selected image?</p>
             <div className="flex flex-wrap gap-2">
               <Button disabled={pending} onClick={() => post({ action: "as_is", imageId: selected })}>
-                Use as-is
+                Polish it
+              </Button>
+              <Button
+                variant="secondary"
+                disabled={pending}
+                onClick={() => post({ action: "finish", imageId: selected })}
+              >
+                Use as-is (finish)
               </Button>
               <Button
                 variant="secondary"
