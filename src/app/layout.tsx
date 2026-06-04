@@ -33,7 +33,7 @@ export default function RootLayout({
                 alt="Volare"
                 width={28}
                 height={28}
-                className="rounded-md"
+                className="h-7 w-7 rounded-md"
                 priority
               />
               <span className="text-lg font-extrabold tracking-tight">ai-image-gen</span>
