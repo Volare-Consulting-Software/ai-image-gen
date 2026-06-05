@@ -21,8 +21,12 @@ interface Pending {
   reject: (err: Error) => void;
 }
 
-// In-memory registry. Local single-instance dev only — fine to lose on restart.
-const pending = new Map<string, Pending>();
+// Back the registry on globalThis so all module instances (the instrumentation
+// runner and the route handlers, which Next can bundle separately) share ONE
+// map, and so it survives HMR module reloads. Local single-instance dev only.
+const globalForHandoffs = globalThis as unknown as { __aigHandoffs?: Map<string, Pending> };
+const pending: Map<string, Pending> =
+  globalForHandoffs.__aigHandoffs ?? (globalForHandoffs.__aigHandoffs = new Map());
 
 const DEFAULT_TIMEOUT_MS = 30 * 60 * 1000;
 
