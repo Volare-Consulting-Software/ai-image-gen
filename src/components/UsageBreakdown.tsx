@@ -74,9 +74,10 @@ export function UsageBreakdown({
             <Stats tokens={p.tokens} cost={p.cost} />
           </button>
         ))}
-        <span className="inline-flex items-center gap-1.5 font-semibold text-text-secondary">
-          <span>Total</span>
-          <Stats tokens={total.tokens} cost={total.cost} />
+        <span className="inline-flex items-center gap-1.5 text-sm font-bold text-text-primary">
+          <span className="text-text-secondary">Total</span>
+          <MoneyIcon className="h-3.5 w-3.5" />
+          {fmtCost(total.cost)}
         </span>
       </div>
 

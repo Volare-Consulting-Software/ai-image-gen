@@ -28,6 +28,12 @@ const WORKING_LABEL: Record<string, string> = {
   claude_refine: "Refining…",
 };
 
+const STAGE_LABEL: Record<string, string> = {
+  candidate: "Option",
+  gemini_refine: "Style edit",
+  claude_refine: "Polish",
+};
+
 export default async function ProjectPage({
   params,
   searchParams,
@@ -94,6 +100,15 @@ export default async function ProjectPage({
                   alt="preview"
                   className="mx-auto max-h-[32rem] w-auto object-contain"
                 />
+              </div>
+              <div className="rounded-xl border border-border bg-surface p-4">
+                <p className="mb-1 text-xs font-semibold text-text-muted">
+                  #{previewImage.roundIndex + 1} · {STAGE_LABEL[previewImage.stage] ?? previewImage.stage}
+                </p>
+                <p className="whitespace-pre-wrap text-sm text-text-secondary">
+                  {previewImage.promptOrInstruction.trim() ||
+                    (previewImage.stage === "claude_refine" ? "Automatic clean-up" : "—")}
+                </p>
               </div>
               <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
                 <span className="text-sm text-text-secondary">Continue the project from this image instead?</span>
