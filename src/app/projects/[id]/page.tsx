@@ -15,6 +15,8 @@ import { RefineLoopPanel } from "@/components/RefineLoopPanel";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
 import { PromptHistory } from "@/components/PromptHistory";
 import { DownloadControl } from "@/components/DownloadControl";
+import { PickUpButton } from "@/components/PickUpButton";
+import { UsageSummary } from "@/components/UsageSummary";
 import type { ClarifyingQuestion } from "@/types/clarification";
 
 export const dynamic = "force-dynamic";
@@ -26,13 +28,24 @@ const WORKING_LABEL: Record<string, string> = {
   claude_refine: "Refining…",
 };
 
-export default async function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProjectPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ image?: string }>;
+}) {
   const { id } = await params;
+  const { image: previewId } = await searchParams;
   const detail = await getProjectDetail(id);
   if (!detail) notFound();
 
   const { project, pendingGate, images, activeJob } = detail;
   const working = Boolean(activeJob);
+
+  // Previewing an earlier image in the main area (clicked from the history).
+  const previewImage = previewId ? images.find((img) => img.id === previewId) : undefined;
+  const previewingOther = previewImage && previewImage.id !== project.selectedImageId;
 
   // If a polish step is handed off, build the paste-ready brief for this project.
   const handoff = getHandoffForProject(project.id);
@@ -55,23 +68,39 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-extrabold tracking-tight">{project.title}</h1>
           <StatusBadge status={project.status} />
-          {(() => {
-            const tokens = images.reduce((s, i) => s + (i.inputTokens ?? 0) + (i.outputTokens ?? 0), 0);
-            const cost = images.reduce((s, i) => s + (i.costUsd ?? 0), 0);
-            if (tokens === 0 && cost === 0) return null;
-            const parts = [
-              tokens > 0 ? `${tokens.toLocaleString()} tok` : null,
-              cost > 0 ? `$${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(3)}` : null,
-            ].filter(Boolean);
-            return <span className="text-xs text-text-muted">{parts.join(" · ")} total</span>;
-          })()}
         </div>
         <p className="text-sm text-text-secondary">{project.refinedPrompt ?? project.originalPrompt}</p>
+        <UsageSummary images={images} />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_18rem]">
         <section className="min-w-0">
-          {working && handoff ? (
+          {previewingOther && previewImage ? (
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium text-text-secondary">Viewing an earlier image</span>
+                <Link
+                  href={`/projects/${project.id}`}
+                  scroll={false}
+                  className="text-sm text-text-secondary hover:text-text-primary hover:underline"
+                >
+                  Back to current step →
+                </Link>
+              </div>
+              <div className="overflow-hidden rounded-xl border border-border bg-surface">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={`/api/images/${previewImage.id}`}
+                  alt="preview"
+                  className="mx-auto max-h-[32rem] w-auto object-contain"
+                />
+              </div>
+              <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+                <span className="text-sm text-text-secondary">Continue the project from this image instead?</span>
+                <PickUpButton projectId={project.id} imageId={previewImage.id} />
+              </div>
+            </div>
+          ) : working && handoff ? (
             <HandoffBrief brief={handoffBrief} sourceUrl={handoffSourceUrl} />
           ) : working ? (
             <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-6">
@@ -143,6 +172,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
             projectId={project.id}
             images={images}
             selectedImageId={project.selectedImageId}
+            previewId={previewId}
           />
         </aside>
       </div>

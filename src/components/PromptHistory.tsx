@@ -1,31 +1,7 @@
 import type { Image, Project } from "@/generated/prisma/client";
 
-// Distinct marks for each AI system.
-function GeminiMark() {
-  return (
-    <svg viewBox="0 0 24 24" className="h-3 w-3 text-blue-600" fill="currentColor" aria-label="Gemini">
-      <path d="M12 2c.5 4.5 3 7 7.5 7.5C15 10 12.5 12.5 12 17c-.5-4.5-3-7-7.5-7.5C9 9.5 11.5 7 12 2z" />
-    </svg>
-  );
-}
-
-function ClaudeMark() {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className="h-3 w-3 text-orange-600"
-      stroke="currentColor"
-      strokeWidth="2"
-      fill="none"
-      aria-label="Claude"
-    >
-      <line x1="12" y1="3" x2="12" y2="21" />
-      <line x1="3" y1="12" x2="21" y2="12" />
-      <line x1="5.6" y1="5.6" x2="18.4" y2="18.4" />
-      <line x1="18.4" y1="5.6" x2="5.6" y2="18.4" />
-    </svg>
-  );
-}
+import { ClaudeMark, GeminiMark } from "@/components/ProviderIcons";
+import { MoneyIcon, TokenIcon } from "@/components/UsageIcons";
 
 function Sparkle() {
   return (
@@ -33,11 +9,6 @@ function Sparkle() {
       <path d="M12 2l1.8 5.5L19 9.3l-5.2 1.8L12 16l-1.8-4.9L5 9.3l5.2-1.8L12 2z" />
     </svg>
   );
-}
-
-function fmtTokens(input?: number | null, output?: number | null): string | null {
-  const total = (input ?? 0) + (output ?? 0);
-  return total > 0 ? `${total.toLocaleString()} tok` : null;
 }
 
 function fmtCost(cost?: number | null): string | null {
@@ -62,15 +33,27 @@ function SourceBadge({ s }: { s: Source }) {
     );
   }
   const isGemini = s.system === "gemini";
-  const usage = [fmtTokens(s.inputTokens, s.outputTokens), fmtCost(s.costUsd)].filter(Boolean).join(" · ");
+  const tokens = (s.inputTokens ?? 0) + (s.outputTokens ?? 0);
+  const cost = fmtCost(s.costUsd);
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-text-secondary">
-      {isGemini ? <GeminiMark /> : <ClaudeMark />}
-      <span>
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-surface-sunken px-2 py-0.5 text-[10px] font-semibold text-text-secondary">
+      <span className="inline-flex items-center gap-1">
+        {isGemini ? <GeminiMark /> : <ClaudeMark />}
         {isGemini ? "Gemini" : "Claude"}
         {s.model ? ` · ${s.model}` : ""}
       </span>
-      {usage && <span className="font-normal text-text-muted">· {usage}</span>}
+      {tokens > 0 && (
+        <span className="inline-flex items-center gap-0.5 font-normal text-text-muted">
+          <TokenIcon className="h-2.5 w-2.5" />
+          {tokens.toLocaleString()}
+        </span>
+      )}
+      {cost && (
+        <span className="inline-flex items-center gap-0.5 font-normal text-text-muted">
+          <MoneyIcon className="h-2.5 w-2.5" />
+          {cost}
+        </span>
+      )}
     </span>
   );
 }
