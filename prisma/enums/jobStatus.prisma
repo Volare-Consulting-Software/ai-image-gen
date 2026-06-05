@@ -1,0 +1,7 @@
+// Processing state of an async job.
+enum JobStatus {
+  queued
+  running
+  done
+  error
+}

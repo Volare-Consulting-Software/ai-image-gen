@@ -1,0 +1,6 @@
+// Which step of the journey produced an image.
+enum ImageStage {
+  candidate // one of the 3-up generation candidates
+  gemini_refine // a single-image conversational re-edit by Gemini
+  claude_refine // a technical refinement pass by Claude
+}

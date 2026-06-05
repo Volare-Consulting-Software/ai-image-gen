@@ -1,0 +1,7 @@
+// Async work units processed by the in-process job runner.
+enum JobType {
+  clarify // ask high-impact clarifying questions about a vague prompt
+  generate // generate 3 candidates from the (refined) prompt
+  gemini_edit // re-edit a single selected image with suggestions
+  claude_refine // technical refinement pass (Claude + image CLI tools)
+}

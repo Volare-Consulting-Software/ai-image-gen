@@ -9,7 +9,8 @@ config({ path: ".env" });
 
 export default defineConfig({
   // Multi-file schema: point at the folder so Prisma merges schema.prisma
-  // (generator + datasource), enums.prisma, and every model under tables/.
+  // (generator + datasource), every enum under enums/, and every model under
+  // tables/.
   schema: "prisma",
   migrations: {
     path: "prisma/migrations",
