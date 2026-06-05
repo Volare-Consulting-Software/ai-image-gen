@@ -129,6 +129,14 @@ export class JobProcessor {
     const { prompt } = job.payload as unknown as ClarifyPayload;
     const result = await getImageGenerator().clarify(prompt);
 
+    // Replace the truncated placeholder title with the AI summary.
+    if (result.title) {
+      await prisma.project.update({
+        where: { id: job.projectId },
+        data: { title: result.title },
+      });
+    }
+
     if (result.isVague && result.questions.length > 0) {
       await createGate(
         job.projectId,
@@ -305,6 +313,10 @@ export class JobProcessor {
         roundIndex: meta.roundIndex,
         shapeAvailable: tags.shapeAvailable,
         transparentBgAvailable: tags.transparentBgAvailable,
+        model: generated.usage?.model,
+        inputTokens: generated.usage?.inputTokens,
+        outputTokens: generated.usage?.outputTokens,
+        costUsd: generated.usage?.costUsd,
       },
     });
     const key = `projects/${meta.projectId}/${row.id}.${extFor(generated.mimeType)}`;

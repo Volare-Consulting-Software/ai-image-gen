@@ -52,9 +52,19 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
         <Link href="/" className="text-sm text-text-secondary hover:text-text-primary hover:underline">
           ← All projects
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <h1 className="text-xl font-extrabold tracking-tight">{project.title}</h1>
           <StatusBadge status={project.status} />
+          {(() => {
+            const tokens = images.reduce((s, i) => s + (i.inputTokens ?? 0) + (i.outputTokens ?? 0), 0);
+            const cost = images.reduce((s, i) => s + (i.costUsd ?? 0), 0);
+            if (tokens === 0 && cost === 0) return null;
+            const parts = [
+              tokens > 0 ? `${tokens.toLocaleString()} tok` : null,
+              cost > 0 ? `$${cost < 0.01 ? cost.toFixed(4) : cost.toFixed(3)}` : null,
+            ].filter(Boolean);
+            return <span className="text-xs text-text-muted">{parts.join(" · ")} total</span>;
+          })()}
         </div>
         <p className="text-sm text-text-secondary">{project.refinedPrompt ?? project.originalPrompt}</p>
       </div>

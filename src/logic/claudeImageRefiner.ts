@@ -93,9 +93,16 @@ Read ./input.png first to assess it, then apply the change and write the output 
       env: { ...process.env, NODE_PATH: PROJECT_NODE_MODULES },
     };
 
+    let usage: GeneratedImage["usage"];
     try {
       for await (const message of query({ prompt, options })) {
         if (message.type === "result") {
+          usage = {
+            model: this.model,
+            inputTokens: message.usage?.input_tokens,
+            outputTokens: message.usage?.output_tokens,
+            costUsd: message.total_cost_usd,
+          };
           if (message.subtype !== "success") {
             logger.warn(
               { subtype: message.subtype, projectId: input.projectId },
@@ -114,7 +121,7 @@ Read ./input.png first to assess it, then apply the change and write the output 
       for (const candidate of OUTPUT_CANDIDATES) {
         const data = await readFile(join(scratch, candidate.file)).catch(() => null);
         if (data) {
-          return { data, mimeType: candidate.mimeType };
+          return { data, mimeType: candidate.mimeType, usage };
         }
       }
       throw new Error("Claude refinement did not produce an output image");

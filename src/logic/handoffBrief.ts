@@ -20,6 +20,8 @@ export function buildHandoffBrief(task: Omit<HandoffTask, "source">, baseUrl: st
 
 3. Post the refined image back:
    curl -s -X POST "${resultUrl}" -H "Content-Type: image/png" --data-binary @output.png
+   If you know your token usage for this task, also add headers:
+   -H "x-input-tokens: <n>" -H "x-output-tokens: <n>" -H "x-model: <model>"
 
 The app is waiting on task id ${task.id}; posting the result resumes it.`;
 }

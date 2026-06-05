@@ -33,6 +33,13 @@ model Image {
   shapeAvailable         Boolean @default(false)
   transparentBgAvailable Boolean @default(false)
 
+  // Usage for the call that produced this image (best-effort; null when unknown,
+  // e.g. fixtures or a handoff worker that didn't report it).
+  model        String?
+  inputTokens  Int?
+  outputTokens Int?
+  costUsd      Float?
+
   createdAt DateTime @default(now()) @db.Timestamptz(6)
 
   project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)

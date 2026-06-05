@@ -12,6 +12,8 @@ export interface ClarificationResult {
   isVague: boolean;
   // Up to a few questions; empty when the prompt is already clear.
   questions: ClarifyingQuestion[];
+  // A short title (≤ ~6 words) summarizing the image to create.
+  title?: string;
 }
 
 // A user's answer to one clarifying question.

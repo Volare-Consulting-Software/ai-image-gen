@@ -30,9 +30,10 @@ async function placeholder(variant: number): Promise<GeneratedImage> {
 // geometric placeholder images, and applies a real (visible) sharp transform on
 // edits so the whole pipeline — storage, history, UI — is exercised offline.
 export class FixtureImageGenerator implements ImageGenerator {
-  async clarify(_prompt: string): Promise<ClarificationResult> {
+  async clarify(prompt: string): Promise<ClarificationResult> {
     return {
       isVague: true,
+      title: prompt.trim().split(/\s+/).slice(0, 6).join(" ") || "Untitled",
       questions: [
         {
           question: "What overall style or medium?",

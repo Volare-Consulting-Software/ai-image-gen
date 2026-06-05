@@ -2,6 +2,7 @@ import { GoogleGenAI, Type, type GenerateContentResponse } from "@google/genai";
 
 import type { ImageGenerator } from "@/interfaces/imageGenerator";
 import { logger } from "@/lib/logger";
+import { estimateCostUsd } from "@/logic/pricing";
 import type { ClarificationAnswer, ClarificationResult } from "@/types/clarification";
 import type { GeneratedImage } from "@/types/generation";
 
@@ -28,7 +29,8 @@ Rules:
 - A short or generic prompt is vague: lean toward asking. Only set isVague=false when the
   prompt is already detailed enough to produce a confident, specific result.
 - For every question, give a one-line "why" and 3–5 concrete "options" the user can pick from.
-- Keep questions short and concrete.`;
+- Keep questions short and concrete.
+- Also return a concise "title" (max 6 words) that names the image to create.`;
 }
 
 const REFINE_SYSTEM = `You are a prompt engineer for an AI image generator. Combine the
@@ -65,6 +67,7 @@ export class GeminiImageGenerator implements ImageGenerator {
           type: Type.OBJECT,
           properties: {
             isVague: { type: Type.BOOLEAN },
+            title: { type: Type.STRING },
             questions: {
               type: Type.ARRAY,
               items: {
@@ -78,7 +81,7 @@ export class GeminiImageGenerator implements ImageGenerator {
               },
             },
           },
-          required: ["isVague", "questions"],
+          required: ["isVague", "title", "questions"],
         },
       },
     });
@@ -93,6 +96,7 @@ export class GeminiImageGenerator implements ImageGenerator {
       return {
         isVague: Boolean(parsed.isVague),
         questions: Array.isArray(parsed.questions) ? parsed.questions.slice(0, maxQuestions) : [],
+        title: typeof parsed.title === "string" && parsed.title.trim() ? parsed.title.trim() : undefined,
       };
     } catch (err) {
       logger.warn({ err: err instanceof Error ? err.message : String(err) }, "clarify parse failed");
@@ -133,6 +137,18 @@ export class GeminiImageGenerator implements ImageGenerator {
     return responses.map((r) => this.extractImage(r));
   }
 
+  private usageFrom(response: GenerateContentResponse): GeneratedImage["usage"] {
+    const um = response.usageMetadata;
+    const inputTokens = um?.promptTokenCount;
+    const outputTokens = um?.candidatesTokenCount;
+    return {
+      model: this.imageModel,
+      inputTokens,
+      outputTokens,
+      costUsd: estimateCostUsd(this.imageModel, inputTokens, outputTokens),
+    };
+  }
+
   async editImage(source: Buffer, mimeType: string, instruction: string): Promise<GeneratedImage> {
     const response = await this.ai.models.generateContent({
       model: this.imageModel,
@@ -151,6 +167,7 @@ export class GeminiImageGenerator implements ImageGenerator {
         return {
           data: Buffer.from(part.inlineData.data, "base64"),
           mimeType: part.inlineData.mimeType ?? "image/png",
+          usage: this.usageFrom(response),
         };
       }
     }
