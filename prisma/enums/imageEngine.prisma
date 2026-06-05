@@ -1,0 +1,5 @@
+// Which engine produced an image.
+enum ImageEngine {
+  gemini
+  claude
+}

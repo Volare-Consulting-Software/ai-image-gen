@@ -1,0 +1,7 @@
+// A pending human decision/question and its resolution.
+enum GateKind {
+  clarify // clarifying questions to sharpen a vague prompt
+  choose // pick among the 3 candidates / none / with-suggestions
+  gemini_refine // happy with the single refined image, or more suggestions
+  claude_refine // done, or refine further with suggestions
+}

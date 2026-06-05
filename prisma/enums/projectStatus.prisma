@@ -1,0 +1,12 @@
+// Lifecycle of an image project. Mirrors the state machine in
+// src/logic/projectService.ts.
+enum ProjectStatus {
+  drafting_prompt
+  clarifying
+  generating
+  choosing
+  gemini_refining
+  claude_refining
+  complete
+  error
+}
