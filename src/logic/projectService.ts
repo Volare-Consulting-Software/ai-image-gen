@@ -13,8 +13,10 @@ import type {
 // The default brief for Claude's automatic first refinement pass.
 export const DEFAULT_REFINE_BRIEF =
   "Apply a balanced technical clean-up: sharpen for clarity, gently denoise, " +
-  "normalise contrast and levels, and tidy jagged edges/lines without altering " +
-  "the subject, composition, or style.";
+  "normalise contrast and levels, and tidy jagged edges/lines. Scan for and fix " +
+  "AI-generation artifacts — abrupt or illogical color transitions, stray white/" +
+  "empty patches where colors should blend, banding and blotches — so colors flow " +
+  "together naturally. Do not alter the subject, composition, or style.";
 
 function deriveTitle(prompt: string): string {
   const trimmed = prompt.trim().replace(/\s+/g, " ");

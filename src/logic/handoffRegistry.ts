@@ -56,6 +56,17 @@ export function getHandoffSource(id: string): { data: Buffer; mimeType: string }
   return entry ? { data: entry.task.source, mimeType: entry.task.mimeType } : null;
 }
 
+// The pending handoff for a given project (without bytes), if any.
+export function getHandoffForProject(projectId: string): Omit<HandoffTask, "source"> | null {
+  for (const { task } of pending.values()) {
+    if (task.projectId === projectId) {
+      const { source: _source, ...rest } = task;
+      return rest;
+    }
+  }
+  return null;
+}
+
 // Resolve a handoff with the posted result; the awaiting job then continues.
 export function resolveHandoff(id: string, result: GeneratedImage): boolean {
   const entry = pending.get(id);

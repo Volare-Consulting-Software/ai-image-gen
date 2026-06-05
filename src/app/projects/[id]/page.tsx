@@ -1,7 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 
 import { getProjectDetail } from "@/logic/projectQueries";
+import { getHandoffForProject } from "@/logic/handoffRegistry";
+import { buildHandoffBrief } from "@/logic/handoffBrief";
+import { baseUrlFromHeaders } from "@/lib/requestUrl";
+import { HandoffBrief } from "@/components/HandoffBrief";
 import { StatusBadge } from "@/components/StatusBadge";
 import { ProjectPoller } from "@/components/ProjectPoller";
 import { ClarifyForm } from "@/components/ClarifyForm";
@@ -29,6 +34,16 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
   const { project, pendingGate, images, activeJob } = detail;
   const working = Boolean(activeJob);
 
+  // If a polish step is handed off, build the paste-ready brief for this project.
+  const handoff = getHandoffForProject(project.id);
+  let handoffBrief = "";
+  let handoffSourceUrl = "";
+  if (handoff) {
+    const base = baseUrlFromHeaders(await headers());
+    handoffBrief = buildHandoffBrief(handoff, base);
+    handoffSourceUrl = `${base}/api/handoff/${handoff.id}/source`;
+  }
+
   return (
     <div className="flex flex-col gap-6">
       <ProjectPoller active={working} />
@@ -46,7 +61,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ id: st
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_18rem]">
         <section className="min-w-0">
-          {working ? (
+          {working && handoff ? (
+            <HandoffBrief brief={handoffBrief} sourceUrl={handoffSourceUrl} />
+          ) : working ? (
             <div className="flex items-center gap-3 rounded-xl border border-border bg-surface p-6">
               <span className="h-4 w-4 animate-spin rounded-full border-2 border-accent border-t-transparent" />
               <span className="text-sm text-text-secondary">

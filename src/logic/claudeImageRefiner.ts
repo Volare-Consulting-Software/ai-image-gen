@@ -28,6 +28,9 @@ changing what it depicts or its artistic style. Your responsibilities include:
 
 - Sharpness / clarity, denoising, color balance, saturation, contrast and levels.
 - Cleaning up jagged lines, edges, circles and shapes.
+- Fixing AI-generation artifacts: abrupt or illogical color transitions, stray
+  white/empty patches where colors should blend continuously, color banding, and
+  blotches — smooth them so adjacent colors flow together naturally.
 - Scaling / resizing and upscaling.
 - Format / type conversion (PNG, JPEG, WebP).
 - Background removal and transparency (alpha channel).
