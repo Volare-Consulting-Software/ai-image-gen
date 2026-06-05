@@ -5,14 +5,13 @@ import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/Button";
 
-// Technical quick-actions for the polish stage — these map to deterministic
-// image operations (format, scale, layering, transparency) the refiner runs.
+// Quick-actions for the polish stage — image-quality refinements only. Output
+// concerns (format, size, transparency) are handled at download time, not here.
 const POLISH_PRESETS = [
-  "Make the background transparent",
-  "Upscale 2× and keep it crisp",
-  "Convert to PNG",
-  "Convert to JPEG",
   "Sharpen the edges, lines and shapes",
+  "Smooth out color banding and blotches",
+  "Remove stray speckles and artifacts",
+  "Even out the lighting and contrast",
 ];
 
 // Drives both refinement loops:
