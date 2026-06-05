@@ -39,10 +39,10 @@ export default async function ProjectPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ image?: string }>;
+  searchParams: Promise<{ image?: string; refine?: string }>;
 }) {
   const { id } = await params;
-  const { image: previewId } = await searchParams;
+  const { image: previewId, refine: refineHint } = await searchParams;
   const detail = await getProjectDetail(id);
   if (!detail) notFound();
 
@@ -142,8 +142,8 @@ export default async function ProjectPage({
                     />
                   </div>
                   <DownloadControl
+                    projectId={project.id}
                     imageId={project.selectedImageId}
-                    shapeAvailable={finalImage?.shapeAvailable ?? false}
                     transparentBgAvailable={finalImage?.transparentBgAvailable ?? false}
                   />
                 </div>
@@ -171,9 +171,19 @@ export default async function ProjectPage({
               );
             })()
           ) : pendingGate?.kind === "gemini_refine" && project.selectedImageId ? (
-            <RefineLoopPanel projectId={project.id} imageId={project.selectedImageId} variant="style" />
+            <RefineLoopPanel
+              projectId={project.id}
+              imageId={project.selectedImageId}
+              variant="style"
+              initialText={refineHint}
+            />
           ) : pendingGate?.kind === "claude_refine" && project.selectedImageId ? (
-            <RefineLoopPanel projectId={project.id} imageId={project.selectedImageId} variant="polish" />
+            <RefineLoopPanel
+              projectId={project.id}
+              imageId={project.selectedImageId}
+              variant="polish"
+              initialText={refineHint}
+            />
           ) : (
             <div className="rounded-xl border border-border bg-surface p-6 text-sm text-text-muted">
               Nothing to do right now.

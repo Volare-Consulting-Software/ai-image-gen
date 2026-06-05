@@ -22,14 +22,16 @@ export function RefineLoopPanel({
   projectId,
   imageId,
   variant,
+  initialText = "",
 }: {
   projectId: string;
   imageId: string;
   variant: "style" | "polish";
+  initialText?: string;
 }) {
   const router = useRouter();
-  const [text, setText] = useState("");
-  const [open, setOpen] = useState(false);
+  const [text, setText] = useState(initialText);
+  const [open, setOpen] = useState(initialText.trim().length > 0);
   const [pending, startTransition] = useTransition();
 
   const advanceAction = variant === "style" ? "happy" : "done";
