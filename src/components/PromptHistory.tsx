@@ -90,12 +90,60 @@ function Entry({ label, text, source, ai = false }: { label: string; text: strin
   );
 }
 
+interface StepEntry {
+  key: string;
+  label: string;
+  text: string;
+  source: Source;
+}
+
 export function PromptHistory({ project, images }: { project: Project; images: Image[] }) {
-  const steps = images.filter((img) => img.stage !== "candidate");
   const isRefined = Boolean(
     project.refinedPrompt && project.refinedPrompt !== project.originalPrompt,
   );
   const textModel = process.env.GEMINI_TEXT_MODEL ?? "gemini-2.5-flash";
+
+  // Build ordered step entries. Candidate rounds collapse into one "Generated N
+  // options" entry (Gemini) so the engine that produced them is visible.
+  const stepEntries: StepEntry[] = [];
+  const seenGroups = new Set<string>();
+  for (const img of images) {
+    if (img.stage === "candidate") {
+      const gid = img.candidateGroupId ?? img.id;
+      if (seenGroups.has(gid)) continue;
+      seenGroups.add(gid);
+      const group = images.filter(
+        (i) => i.stage === "candidate" && (i.candidateGroupId ?? i.id) === gid,
+      );
+      const sum = (f: (i: Image) => number | null) => group.reduce((s, i) => s + (f(i) ?? 0), 0);
+      stepEntries.push({
+        key: gid,
+        label: `#${img.roundIndex + 1} · Generated ${group.length} option${group.length > 1 ? "s" : ""}`,
+        text: img.promptOrInstruction,
+        source: {
+          system: "gemini",
+          model: group[0]?.model,
+          inputTokens: sum((i) => i.inputTokens),
+          outputTokens: sum((i) => i.outputTokens),
+          costUsd: sum((i) => i.costUsd),
+        },
+      });
+    } else {
+      const isStyle = img.stage === "gemini_refine";
+      stepEntries.push({
+        key: img.id,
+        label: `#${img.roundIndex + 1} · ${isStyle ? "Style edit" : "Polish"}`,
+        text: img.promptOrInstruction.trim() || (isStyle ? "(no instruction)" : "Automatic clean-up"),
+        source: {
+          system: img.engine === "claude" ? "claude" : "gemini",
+          model: img.model,
+          inputTokens: img.inputTokens,
+          outputTokens: img.outputTokens,
+          costUsd: img.costUsd,
+        },
+      });
+    }
+  }
 
   return (
     <div className="flex flex-col gap-4 rounded-xl border border-border bg-surface p-4">
@@ -117,24 +165,9 @@ export function PromptHistory({ project, images }: { project: Project; images: I
         />
       )}
 
-      {steps.map((img) => {
-        const isStyle = img.stage === "gemini_refine";
-        const text = img.promptOrInstruction.trim() || (isStyle ? "(no instruction)" : "Automatic clean-up");
-        return (
-          <Entry
-            key={img.id}
-            label={`#${img.roundIndex + 1} · ${isStyle ? "Style edit" : "Polish"}`}
-            text={text}
-            source={{
-              system: img.engine === "claude" ? "claude" : "gemini",
-              model: img.model,
-              inputTokens: img.inputTokens,
-              outputTokens: img.outputTokens,
-              costUsd: img.costUsd,
-            }}
-          />
-        );
-      })}
+      {stepEntries.map((e) => (
+        <Entry key={e.key} label={e.label} text={e.text} source={e.source} />
+      ))}
     </div>
   );
 }
