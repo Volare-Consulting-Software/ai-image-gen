@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import { resolveHandoff } from "@/logic/handoffRegistry";
+import { estimateCostUsd } from "@/logic/pricing";
 import type { ImageUsage } from "@/types/generation";
 
 const num = (v: string | null | undefined): number | undefined => {
@@ -60,6 +61,11 @@ export async function POST(
 
   if (data.length === 0) {
     return NextResponse.json({ error: "Empty image body" }, { status: 400 });
+  }
+
+  // If the worker reported a model + tokens but no cost, estimate it.
+  if (usage && usage.costUsd == null) {
+    usage.costUsd = estimateCostUsd(usage.model, usage.inputTokens, usage.outputTokens);
   }
 
   const ok = resolveHandoff(id, { data, mimeType, usage });
