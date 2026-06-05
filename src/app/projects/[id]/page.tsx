@@ -146,6 +146,17 @@ export default async function ProjectPage({
                     imageId={project.selectedImageId}
                     transparentBgAvailable={finalImage?.transparentBgAvailable ?? false}
                   />
+                  <div className="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-surface p-4">
+                    <span className="text-sm text-text-secondary">
+                      Want to keep going? Reopen this project to refine it further.
+                    </span>
+                    <PickUpButton
+                      projectId={project.id}
+                      imageId={project.selectedImageId}
+                      label="Reopen & refine"
+                      variant="button"
+                    />
+                  </div>
                 </div>
               );
             })()
