@@ -1,0 +1,32 @@
+name: build-and-push
+
+# ai-image-gen's caller of Volare.Build's build-node-container-image reusable
+# workflow. All the heavy lifting (auth, tagging strategy, buildx + GHCR push)
+# lives in Volare.Build/.github/workflows/build-node-container-image.yml@main —
+# this file just declares when the build runs and supplies the inputs.
+#
+# Image lands at ghcr.io/volare-consulting-software/ai-image-gen (lowercased by
+# the reusable workflow). Auth uses the run's GITHUB_TOKEN with packages:write —
+# no registry secret needed.
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*.*.*"]
+    paths-ignore:
+      - "**/*.md"
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+
+jobs:
+  build-and-push:
+    uses: Volare-Consulting-Software/Volare.Build/.github/workflows/build-node-container-image.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      # Build on every trigger so PRs verify the Dockerfile compiles. Push to
+      # GHCR only on main pushes and tag pushes — never on PRs (no untrusted
+      # builds in the registry).
+      push-image: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
