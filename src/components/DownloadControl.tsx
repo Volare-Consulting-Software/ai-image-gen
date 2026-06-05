@@ -9,9 +9,9 @@ const RASTER_FORMATS = [
 ];
 
 const SIZES = [
-  { value: "xs", label: "X-Small · 256px" },
-  { value: "s", label: "Small · 512px" },
-  { value: "m", label: "Medium · 1024px" },
+  { value: "xs", label: "X-Small · 32px" },
+  { value: "s", label: "Small · 128px" },
+  { value: "m", label: "Medium · 512px" },
   { value: "l", label: "Large · 2048px" },
   { value: "xl", label: "X-Large · 4096px" },
 ];

@@ -4,8 +4,8 @@ import ImageTracer from "imagetracerjs";
 export type ExportFormat = "png" | "jpeg" | "webp" | "svg";
 export type SizeTier = "xs" | "s" | "m" | "l" | "xl";
 
-// Standard longest-edge dimensions, applied to every raster format.
-const SIZES: Record<SizeTier, number> = { xs: 256, s: 512, m: 1024, l: 2048, xl: 4096 };
+// Standard longest-edge dimensions, anchored at 32 (×4 up to large, capped at 4096).
+const SIZES: Record<SizeTier, number> = { xs: 32, s: 128, m: 512, l: 2048, xl: 4096 };
 const MIME: Record<ExportFormat, string> = {
   png: "image/png",
   jpeg: "image/jpeg",

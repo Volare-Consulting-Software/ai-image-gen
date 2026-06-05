@@ -66,7 +66,7 @@ flowchart TD
 
 ### Downloads
 
-The finished image exports as **PNG, JPEG, WebP** (always) and **SVG** (only when the image tags as a vectorizable shape — color-traced via `imagetracerjs`). Five size tiers (longest edge): X-Small 256 · Small 512 · Medium 1024 · Large 2048 · X-Large 4096. PNG is auto-made-transparent when the image tags as having a white/black background.
+The finished image exports as **PNG, JPEG, WebP** (always) and **SVG** (only when the image tags as a vectorizable shape — color-traced via `imagetracerjs`). Five size tiers (longest edge): X-Small 32 · Small 128 · Medium 512 · Large 2048 · X-Large 4096. PNG is auto-made-transparent when the image tags as having a white/black background.
 
 ## Working with Claude Code locally (handoff mode)
 
