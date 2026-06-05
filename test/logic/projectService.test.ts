@@ -61,7 +61,7 @@ describe("ProjectService", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           type: JobType.claude_refine,
-          payload: expect.objectContaining({ sourceImageId: "img1", auto: true }),
+          payload: expect.objectContaining({ sourceImageId: "img1", userInstructions: "" }),
         }),
       }),
     );
@@ -130,7 +130,7 @@ describe("ProjectService", () => {
       expect.objectContaining({
         data: expect.objectContaining({
           type: JobType.claude_refine,
-          payload: expect.objectContaining({ sourceImageId: "imgSel", auto: true }),
+          payload: expect.objectContaining({ sourceImageId: "imgSel", userInstructions: "" }),
         }),
       }),
     );

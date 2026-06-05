@@ -69,8 +69,7 @@ export class ProjectService {
     });
     await this.enqueue(projectId, JobType.claude_refine, {
       sourceImageId: imageId,
-      instructions: DEFAULT_REFINE_BRIEF,
-      auto: true,
+      userInstructions: "",
     } satisfies ClaudeRefinePayload);
   }
 
@@ -117,8 +116,7 @@ export class ProjectService {
     });
     await this.enqueue(projectId, JobType.claude_refine, {
       sourceImageId: imageId,
-      instructions: DEFAULT_REFINE_BRIEF,
-      auto: true,
+      userInstructions: "",
     } satisfies ClaudeRefinePayload);
   }
 
@@ -157,8 +155,7 @@ export class ProjectService {
     });
     await this.enqueue(projectId, JobType.claude_refine, {
       sourceImageId: imageId,
-      instructions: suggestions,
-      auto: false,
+      userInstructions: suggestions,
     } satisfies ClaudeRefinePayload);
   }
 

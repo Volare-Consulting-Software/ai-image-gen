@@ -46,13 +46,13 @@ export function PromptHistory({ project, images }: { project: Project; images: I
         <Entry label="Prompt" text={project.refinedPrompt ?? project.originalPrompt} />
       )}
 
-      {steps.map((img) => (
-        <Entry
-          key={img.id}
-          label={`#${img.roundIndex + 1} · ${img.stage === "gemini_refine" ? "Style edit" : "Polish"}`}
-          text={img.promptOrInstruction}
-        />
-      ))}
+      {steps.map((img) => {
+        const isStyle = img.stage === "gemini_refine";
+        const text = img.promptOrInstruction.trim() || (isStyle ? "(no instruction)" : "Automatic clean-up");
+        return (
+          <Entry key={img.id} label={`#${img.roundIndex + 1} · ${isStyle ? "Style edit" : "Polish"}`} text={text} />
+        );
+      })}
     </div>
   );
 }

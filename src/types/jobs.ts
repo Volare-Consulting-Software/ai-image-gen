@@ -20,7 +20,7 @@ export interface GeminiEditPayload {
 
 export interface ClaudeRefinePayload {
   sourceImageId: string;
-  instructions: string;
-  // True for the automatic first pass on entering the Claude stage.
-  auto: boolean;
+  // The user's polish instructions, or "" for the automatic pass. The system
+  // clean-up brief is appended at run time; only this part is shown in the UI.
+  userInstructions: string;
 }

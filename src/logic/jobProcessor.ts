@@ -13,7 +13,7 @@ import { prisma } from "@/db/client";
 import { getImageGenerator, getImageRefiner, getStorage } from "@/container";
 import { bus, JOB_NUDGE } from "@/logic/events";
 import { analyzeImage } from "@/logic/imageAnalysis";
-import { createGate } from "@/logic/projectService";
+import { createGate, DEFAULT_REFINE_BRIEF } from "@/logic/projectService";
 import { logger } from "@/lib/logger";
 import type { GeneratedImage } from "@/types/generation";
 import type {
@@ -231,10 +231,15 @@ export class JobProcessor {
   }
 
   private async handleClaudeRefine(job: Job): Promise<string[]> {
-    const { sourceImageId, instructions } = job.payload as unknown as ClaudeRefinePayload;
+    const { sourceImageId, userInstructions } = job.payload as unknown as ClaudeRefinePayload;
     const source = await this.loadImage(sourceImageId);
     const sourceBytes = await getStorage().get(source.s3Key);
     const round = await this.nextRound(job.projectId);
+
+    // What Claude actually receives: the user's instructions first (the focus),
+    // then the system clean-up brief appended. Auto pass = brief only.
+    const userPart = userInstructions.trim();
+    const fullInstructions = userPart ? `${userPart}\n\n${DEFAULT_REFINE_BRIEF}` : DEFAULT_REFINE_BRIEF;
 
     const refined = await getImageRefiner().refine({
       projectId: job.projectId,
@@ -242,13 +247,15 @@ export class JobProcessor {
       roundIndex: round,
       source: sourceBytes,
       mimeType: source.mimeType,
-      instructions,
+      instructions: fullInstructions,
     });
     const image = await this.persistImage(refined, {
       projectId: job.projectId,
       stage: ImageStage.claude_refine,
       engine: ImageEngine.claude,
-      promptOrInstruction: instructions,
+      // Store only the user-facing part (empty for an automatic pass); the
+      // appended system brief is never shown in the UI.
+      promptOrInstruction: userPart,
       parentImageId: sourceImageId,
       roundIndex: round,
     });

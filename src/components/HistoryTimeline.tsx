@@ -41,8 +41,12 @@ export function HistoryTimeline({
             <span className="text-xs font-semibold">
               #{img.roundIndex + 1} · {STAGE_LABEL[img.stage] ?? img.stage}
             </span>
-            <span className="truncate text-xs text-text-muted" title={img.promptOrInstruction}>
-              {img.promptOrInstruction}
+            <span
+              className="truncate text-xs text-text-muted"
+              title={img.promptOrInstruction || "Automatic clean-up"}
+            >
+              {img.promptOrInstruction.trim() ||
+                (img.stage === "claude_refine" ? "Automatic clean-up" : "—")}
             </span>
             <PickUpButton projectId={projectId} imageId={img.id} />
           </div>
