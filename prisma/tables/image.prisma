@@ -1,0 +1,51 @@
+// Every image produced at any step, saved with its lineage so the user can
+// browse the whole journey and step back to earlier points.
+model Image {
+  id        String @id @default(cuid(2))
+  projectId String
+
+  // Object key in S3 (or the S3-compatible MinIO bucket in local dev).
+  s3Key    String
+  mimeType String @default("image/png")
+  width    Int?
+  height   Int?
+
+  stage  ImageStage
+  engine ImageEngine
+
+  // The prompt (Gemini generation) or instruction (Gemini edit / Claude refine)
+  // that produced this image.
+  promptOrInstruction String
+
+  // Lineage: the image this one was derived from (edit/refine parent).
+  parentImageId String?
+
+  // Groups the 3 candidates generated together in one CHOOSING round.
+  candidateGroupId String?
+
+  // Monotonic round counter within the project (for ordering the timeline).
+  roundIndex Int @default(0)
+
+  // Export-capability tags computed at generation time.
+  // shapeAvailable: simple/flat enough to vectorize to SVG.
+  // transparentBgAvailable: background is near-uniform white/black, so PNG can
+  // be made transparent.
+  shapeAvailable         Boolean @default(false)
+  transparentBgAvailable Boolean @default(false)
+
+  // Usage for the call that produced this image (best-effort; null when unknown,
+  // e.g. fixtures or a handoff worker that didn't report it).
+  model        String?
+  inputTokens  Int?
+  outputTokens Int?
+  costUsd      Float?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  project  Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent   Image?  @relation("ImageLineage", fields: [parentImageId], references: [id], onDelete: SetNull)
+  children Image[] @relation("ImageLineage")
+
+  @@index([projectId, createdAt])
+  @@index([candidateGroupId])
+}

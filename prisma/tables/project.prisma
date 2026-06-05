@@ -1,0 +1,22 @@
+// An "image project" — one initial prompt and the whole journey of images,
+// gates, and jobs produced while turning it into a finished graphic.
+model Project {
+  id             String        @id @default(cuid(2))
+  title          String
+  originalPrompt String
+  refinedPrompt  String?
+  status         ProjectStatus @default(drafting_prompt)
+
+  // The image currently in focus once the user has picked one to refine. Soft
+  // reference to Image.id (no FK constraint to avoid a Project<->Image cycle).
+  selectedImageId String?
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @db.Timestamptz(6)
+
+  images Image[]
+  gates  Gate[]
+  jobs   Job[]
+
+  @@index([createdAt])
+}

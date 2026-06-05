@@ -1,0 +1,27 @@
+// An async unit of AI work (Gemini generation/edit or Claude refinement). The
+// in-process runner (src/logic/jobProcessor.ts) claims queued jobs and runs
+// them; the client polls the job until it reaches `done` or `error`.
+model Job {
+  id        String @id @default(cuid(2))
+  projectId String
+
+  type   JobType
+  status JobStatus @default(queued)
+
+  // Inputs for the job (prompt, instruction, sourceImageId, answers, …).
+  payload Json @default("{}")
+
+  // Image rows produced by the job (candidate ids, refined image id, …).
+  resultImageIds String[] @default([])
+
+  error String?
+
+  createdAt  DateTime  @default(now()) @db.Timestamptz(6)
+  startedAt  DateTime? @db.Timestamptz(6)
+  finishedAt DateTime? @db.Timestamptz(6)
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@index([projectId, createdAt])
+}

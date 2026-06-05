@@ -1,0 +1,55 @@
+// Native Postgres enum types for ai-image-gen.
+
+// Lifecycle of an image project. Mirrors the state machine in
+// src/logic/projectService.ts.
+enum ProjectStatus {
+  drafting_prompt
+  clarifying
+  generating
+  choosing
+  gemini_refining
+  claude_refining
+  complete
+  error
+}
+
+// Which step of the journey produced an image.
+enum ImageStage {
+  candidate // one of the 3-up generation candidates
+  gemini_refine // a single-image conversational re-edit by Gemini
+  claude_refine // a technical refinement pass by Claude
+}
+
+// Which engine produced an image.
+enum ImageEngine {
+  gemini
+  claude
+}
+
+// Async work units processed by the in-process job runner.
+enum JobType {
+  clarify // ask high-impact clarifying questions about a vague prompt
+  generate // generate 3 candidates from the (refined) prompt
+  gemini_edit // re-edit a single selected image with suggestions
+  claude_refine // technical refinement pass (Claude + image CLI tools)
+}
+
+enum JobStatus {
+  queued
+  running
+  done
+  error
+}
+
+// A pending human decision/question and its resolution.
+enum GateKind {
+  clarify // clarifying questions to sharpen a vague prompt
+  choose // pick among the 3 candidates / none / with-suggestions
+  gemini_refine // happy with the single refined image, or more suggestions
+  claude_refine // done, or refine further with suggestions
+}
+
+enum GateStatus {
+  pending
+  resolved
+}
