@@ -12,6 +12,7 @@ const POLISH_PRESETS = [
   "Smooth out color banding and blotches",
   "Remove stray speckles and artifacts",
   "Even out the lighting and contrast",
+  "Clean up the background so it can be made transparent",
 ];
 
 // Drives both refinement loops:
