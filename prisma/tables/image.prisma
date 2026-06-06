@@ -20,6 +20,10 @@ model Image {
   // Lineage: the image this one was derived from (edit/refine parent).
   parentImageId String?
 
+  // The user-uploaded reference photo that influenced this image, if any. Soft
+  // reference to ReferenceImage.id (kept out of the lineage relation above).
+  referenceImageId String?
+
   // Groups the 3 candidates generated together in one CHOOSING round.
   candidateGroupId String?
 

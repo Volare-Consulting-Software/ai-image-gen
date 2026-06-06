@@ -12,6 +12,7 @@ const selectSchema = z.discriminatedUnion("action", [
     action: z.literal("with_suggestions"),
     imageId: z.string().min(1),
     suggestions: z.string().trim().min(1, "Describe what to change").max(2000),
+    referenceImageId: z.string().min(1).optional(),
   }),
   z.object({ action: z.literal("try_again"), feedback: z.string().trim().max(2000).optional() }),
 ]);
@@ -36,7 +37,12 @@ export async function POST(
       await projectService.acceptAsFinal(id, data.imageId);
       break;
     case "with_suggestions":
-      await projectService.selectWithSuggestions(id, data.imageId, data.suggestions);
+      await projectService.selectWithSuggestions(
+        id,
+        data.imageId,
+        data.suggestions,
+        data.referenceImageId,
+      );
       break;
     case "try_again":
       await projectService.tryAgain(id, data.feedback);

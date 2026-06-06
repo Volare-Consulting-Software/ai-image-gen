@@ -2,7 +2,7 @@ import sharp from "sharp";
 
 import type { ImageGenerator } from "@/interfaces/imageGenerator";
 import type { ClarificationAnswer, ClarificationResult } from "@/types/clarification";
-import type { GeneratedImage } from "@/types/generation";
+import type { GeneratedImage, ReferenceImage } from "@/types/generation";
 
 const SIZE = 768;
 const BACKGROUNDS = ["#1e3a8a", "#7c3aed", "#0f766e", "#b45309", "#be123c", "#155e75"];
@@ -66,13 +66,22 @@ export class FixtureImageGenerator implements ImageGenerator {
     return `${original} — ${qa}`;
   }
 
-  async generateCandidates(_prompt: string, count: number): Promise<GeneratedImage[]> {
+  async generateCandidates(
+    _prompt: string,
+    count: number,
+    _reference?: ReferenceImage,
+  ): Promise<GeneratedImage[]> {
     // Random base so "try again" yields visibly different placeholders.
     const base = Math.floor(Math.random() * BACKGROUNDS.length);
     return Promise.all(Array.from({ length: count }, (_, i) => placeholder(base + i)));
   }
 
-  async editImage(source: Buffer, _mimeType: string, _instruction: string): Promise<GeneratedImage> {
+  async editImage(
+    source: Buffer,
+    _mimeType: string,
+    _instruction: string,
+    _reference?: ReferenceImage,
+  ): Promise<GeneratedImage> {
     // Visibly transform the source so the "edit" is obvious in the UI.
     const data = await sharp(source).modulate({ hue: 45, saturation: 1.15 }).png().toBuffer();
     return { data, mimeType: "image/png", width: SIZE, height: SIZE };

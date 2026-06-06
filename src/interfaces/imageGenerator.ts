@@ -1,5 +1,5 @@
 import type { ClarificationAnswer, ClarificationResult } from "@/types/clarification";
-import type { GeneratedImage } from "@/types/generation";
+import type { GeneratedImage, ReferenceImage } from "@/types/generation";
 
 // The creative engine (Google Gemini "nano-banana"): prompt refinement,
 // candidate generation, and conversational style edits.
@@ -12,11 +12,22 @@ export interface ImageGenerator {
   // image-generation prompt.
   refinePrompt(original: string, answers: ClarificationAnswer[]): Promise<string>;
 
-  // Generate `count` independent candidates for the prompt.
-  generateCandidates(prompt: string, count: number): Promise<GeneratedImage[]>;
+  // Generate `count` independent candidates for the prompt. An optional
+  // reference photo is sent alongside the text to influence the result.
+  generateCandidates(
+    prompt: string,
+    count: number,
+    reference?: ReferenceImage,
+  ): Promise<GeneratedImage[]>;
 
-  // Re-edit a single image with a natural-language style instruction.
-  editImage(source: Buffer, mimeType: string, instruction: string): Promise<GeneratedImage>;
+  // Re-edit a single image with a natural-language style instruction. An
+  // optional reference photo is sent alongside the source to guide the edit.
+  editImage(
+    source: Buffer,
+    mimeType: string,
+    instruction: string,
+    reference?: ReferenceImage,
+  ): Promise<GeneratedImage>;
 }
 
 export const ImageGeneratorToken = Symbol.for("ImageGenerator");

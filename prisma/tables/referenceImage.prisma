@@ -1,0 +1,19 @@
+// A user-uploaded reference photo, optionally attached to a Gemini prompt to
+// influence the generated result. Stored separately from `Image` so user
+// uploads never pollute the generated-image lineage/timeline. No FK to Project:
+// it can be uploaded before the project exists (the initial-prompt path).
+model ReferenceImage {
+  id       String @id @default(cuid(2))
+  s3Key    String
+  mimeType String
+  bytes    Int
+
+  // Set once a job has used this reference. Un-consumed rows older than the TTL
+  // are swept (abandoned uploads: attached but never submitted, or submitted
+  // without inserting the chip).
+  consumed Boolean @default(false)
+
+  createdAt DateTime @default(now()) @db.Timestamptz(6)
+
+  @@index([consumed, createdAt])
+}

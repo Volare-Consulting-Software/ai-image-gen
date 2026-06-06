@@ -16,6 +16,18 @@ model Job {
 
   error String?
 
+  // Structured Gemini finish/block reason code for an AI failure (e.g.
+  // "IMAGE_RECITATION"), surfaced to the user as a friendly "AI error".
+  failureReason String?
+
+  // Usage for a job that consumed tokens but produced no Image row (e.g. an
+  // image call that returned no image). Successful jobs record usage on the
+  // Image(s) they create instead, so this is only set on such failures.
+  model        String?
+  inputTokens  Int?
+  outputTokens Int?
+  costUsd      Float?
+
   createdAt  DateTime  @default(now()) @db.Timestamptz(6)
   startedAt  DateTime? @db.Timestamptz(6)
   finishedAt DateTime? @db.Timestamptz(6)

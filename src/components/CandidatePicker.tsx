@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { PromptEditor, type PromptEditorHandle } from "@/components/ui/PromptEditor";
+import { ReferenceImageField } from "@/components/ui/ReferenceImageField";
 
 export function CandidatePicker({
   projectId,
@@ -23,6 +25,8 @@ export function CandidatePicker({
   const [feedback, setFeedback] = useState("");
   const [mode, setMode] = useState<"none" | "suggest" | "again">("none");
   const [pending, startTransition] = useTransition();
+  const editorRef = useRef<PromptEditorHandle>(null);
+  const [referenceImageId, setReferenceImageId] = useState<string | null>(null);
 
   function post(body: Record<string, unknown>) {
     startTransition(async () => {
@@ -83,17 +87,32 @@ export function CandidatePicker({
             </div>
             {mode === "suggest" && (
               <div className="flex flex-col gap-2">
-                <textarea
+                <PromptEditor
+                  ref={editorRef}
                   value={suggestions}
-                  onChange={(e) => setSuggestions(e.target.value)}
+                  onChange={setSuggestions}
                   rows={2}
                   placeholder="e.g. make the background warmer and add a subtle gradient"
-                  className="w-full resize-y rounded-lg border border-border bg-base p-2 text-base outline-none focus:border-accent"
+                  disabled={pending}
+                />
+                <ReferenceImageField
+                  editorRef={editorRef}
+                  onReferenceChange={setReferenceImageId}
+                  disabled={pending}
                 />
                 <div>
                   <Button
                     disabled={pending || suggestions.trim().length === 0}
-                    onClick={() => post({ action: "with_suggestions", imageId: selected, suggestions })}
+                    onClick={() =>
+                      post({
+                        action: "with_suggestions",
+                        imageId: selected,
+                        suggestions,
+                        ...(referenceImageId && editorRef.current?.hasChip()
+                          ? { referenceImageId }
+                          : {}),
+                      })
+                    }
                   >
                     Apply changes
                   </Button>

@@ -11,6 +11,7 @@ const refineSchema = z.discriminatedUnion("action", [
   z.object({
     action: z.literal("more"),
     suggestions: z.string().trim().min(1, "Describe what to change").max(2000),
+    referenceImageId: z.string().min(1).optional(),
   }),
   z.object({ action: z.literal("done") }),
   z.object({
@@ -39,7 +40,7 @@ export async function POST(
       await projectService.acceptAsFinal(id);
       break;
     case "more":
-      await projectService.geminiMore(id, data.suggestions);
+      await projectService.geminiMore(id, data.suggestions, data.referenceImageId);
       break;
     case "done":
       await projectService.claudeDone(id);
