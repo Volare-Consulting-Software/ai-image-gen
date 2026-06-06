@@ -58,6 +58,14 @@ export function HistoryTimeline({
                       Current
                     </span>
                   )}
+                  {img.referenceImageId && (
+                    <span
+                      title="Generated with a reference image"
+                      className="rounded-full bg-accent-dim px-1.5 py-px text-[10px] font-semibold text-accent"
+                    >
+                      Ref
+                    </span>
+                  )}
                 </span>
                 <span className="truncate text-xs text-text-muted" title={instruction}>
                   {instruction}

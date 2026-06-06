@@ -13,6 +13,8 @@ import { ClarifyForm } from "@/components/ClarifyForm";
 import { CandidatePicker } from "@/components/CandidatePicker";
 import { RefineLoopPanel } from "@/components/RefineLoopPanel";
 import { HistoryTimeline } from "@/components/HistoryTimeline";
+import { ReferenceImagesPanel } from "@/components/ReferenceImagesPanel";
+import { ProjectErrorPanel } from "@/components/ProjectErrorPanel";
 import { PromptHistory } from "@/components/PromptHistory";
 import { DownloadControl } from "@/components/DownloadControl";
 import { PickUpButton } from "@/components/PickUpButton";
@@ -46,7 +48,8 @@ export default async function ProjectPage({
   const detail = await getProjectDetail(id);
   if (!detail) notFound();
 
-  const { project, pendingGate, images, activeJob } = detail;
+  const { project, pendingGate, images, activeJob, referenceImages, lastError, lastFailureReason, failedJobs } =
+    detail;
   const working = Boolean(activeJob);
 
   // Previewing an earlier image in the main area (clicked from the history).
@@ -76,7 +79,7 @@ export default async function ProjectPage({
           <StatusBadge status={project.status} />
         </div>
         <p className="text-sm text-text-secondary">{project.refinedPrompt ?? project.originalPrompt}</p>
-        <UsageSummary images={images} />
+        <UsageSummary images={images} failedJobs={failedJobs} />
       </div>
 
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_18rem]">
@@ -125,9 +128,12 @@ export default async function ProjectPage({
               </span>
             </div>
           ) : project.status === "error" ? (
-            <div className="rounded-xl border border-[var(--error)] bg-surface p-6 text-sm text-error">
-              Something went wrong on the last step. Check the logs, then start a new project.
-            </div>
+            <ProjectErrorPanel
+              projectId={project.id}
+              initialPrompt={project.refinedPrompt ?? project.originalPrompt}
+              lastError={lastError}
+              failureReason={lastFailureReason}
+            />
           ) : project.status === "complete" && project.selectedImageId ? (
             (() => {
               const finalImage = images.find((img) => img.id === project.selectedImageId);
@@ -203,6 +209,7 @@ export default async function ProjectPage({
         </section>
 
         <aside className="lg:border-l lg:border-border lg:pl-6">
+          <ReferenceImagesPanel referenceImages={referenceImages} />
           <h2 className="mb-3 text-sm font-bold tracking-tight">Images</h2>
           <HistoryTimeline
             projectId={project.id}

@@ -1,15 +1,19 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { PromptEditor, type PromptEditorHandle } from "@/components/ui/PromptEditor";
+import { ReferenceImageField } from "@/components/ui/ReferenceImageField";
 
 export function NewProjectComposer() {
   const router = useRouter();
   const [prompt, setPrompt] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
+  const editorRef = useRef<PromptEditorHandle>(null);
+  const [referenceImageId, setReferenceImageId] = useState<string | null>(null);
 
   function submit() {
     setError(null);
@@ -17,7 +21,10 @@ export function NewProjectComposer() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt }),
+        body: JSON.stringify({
+          prompt,
+          ...(referenceImageId && editorRef.current?.hasChip() ? { referenceImageId } : {}),
+        }),
       });
       if (!res.ok) {
         const data = (await res.json().catch(() => ({}))) as { error?: string };
@@ -31,12 +38,18 @@ export function NewProjectComposer() {
 
   return (
     <div className="flex flex-col gap-3">
-      <textarea
+      <PromptEditor
+        ref={editorRef}
         value={prompt}
-        onChange={(e) => setPrompt(e.target.value)}
+        onChange={setPrompt}
         placeholder="e.g. a minimalist logo of a paper airplane for a travel startup"
         rows={3}
-        className="w-full resize-y rounded-lg border border-border bg-base p-3 text-base outline-none focus:border-accent"
+        disabled={pending}
+      />
+      <ReferenceImageField
+        editorRef={editorRef}
+        onReferenceChange={setReferenceImageId}
+        disabled={pending}
       />
       {error && <p className="text-sm text-error">{error}</p>}
       <div>

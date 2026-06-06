@@ -28,12 +28,15 @@ function deriveTitle(prompt: string): string {
 export class ProjectService {
   // ---- creation -----------------------------------------------------------
 
-  async createProject(originalPrompt: string): Promise<Project> {
+  async createProject(originalPrompt: string, referenceImageId?: string): Promise<Project> {
     const project = await prisma.project.create({
       data: {
         title: deriveTitle(originalPrompt),
         originalPrompt,
         status: ProjectStatus.clarifying,
+        // Persisted so candidate generation (and "try again") can reuse it; the
+        // clarify step is text-only and ignores it.
+        referenceImageId,
       },
     });
     await this.enqueue(project.id, JobType.clarify, { prompt: originalPrompt } satisfies ClarifyPayload);
@@ -77,6 +80,7 @@ export class ProjectService {
     projectId: string,
     imageId: string,
     suggestions: string,
+    referenceImageId?: string,
   ): Promise<void> {
     await this.requireProject(projectId);
     await this.resolvePendingGate(projectId, { action: "with_suggestions", imageId, suggestions });
@@ -87,6 +91,7 @@ export class ProjectService {
     await this.enqueue(projectId, JobType.gemini_edit, {
       sourceImageId: imageId,
       instruction: suggestions,
+      referenceImageId,
     } satisfies GeminiEditPayload);
   }
 
@@ -120,7 +125,7 @@ export class ProjectService {
     } satisfies ClaudeRefinePayload);
   }
 
-  async geminiMore(projectId: string, suggestions: string): Promise<void> {
+  async geminiMore(projectId: string, suggestions: string, referenceImageId?: string): Promise<void> {
     const project = await this.requireProject(projectId);
     const imageId = this.requireSelected(project);
     await this.resolvePendingGate(projectId, { action: "more", suggestions });
@@ -131,7 +136,22 @@ export class ProjectService {
     await this.enqueue(projectId, JobType.gemini_edit, {
       sourceImageId: imageId,
       instruction: suggestions,
+      referenceImageId,
     } satisfies GeminiEditPayload);
+  }
+
+  // ---- ERROR RECOVERY -----------------------------------------------------
+
+  // Re-run candidate generation after a failed step, with an optionally edited
+  // prompt. Any reference attached to the project is reused automatically.
+  async regenerate(projectId: string, prompt: string): Promise<void> {
+    await this.requireProject(projectId);
+    await this.resolvePendingGate(projectId, { action: "retry", prompt });
+    await prisma.project.update({
+      where: { id: projectId },
+      data: { status: ProjectStatus.generating, refinedPrompt: prompt },
+    });
+    await this.enqueue(projectId, JobType.generate, { prompt } satisfies GeneratePayload);
   }
 
   // ---- CLAUDE_REFINING (technical loop) -----------------------------------

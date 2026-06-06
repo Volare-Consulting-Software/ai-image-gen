@@ -1,4 +1,5 @@
 import {
+  DeleteObjectCommand,
   GetObjectCommand,
   PutObjectCommand,
   S3Client,
@@ -62,6 +63,10 @@ export class S3Storage implements Storage {
     }
     const bytes = await result.Body.transformToByteArray();
     return Buffer.from(bytes);
+  }
+
+  async delete(key: string): Promise<void> {
+    await this.client.send(new DeleteObjectCommand({ Bucket: this.bucket, Key: key }));
   }
 
   async getSignedUrl(key: string, expiresInSeconds = 3600): Promise<string> {

@@ -16,6 +16,8 @@ export interface GeneratePayload {
 export interface GeminiEditPayload {
   sourceImageId: string;
   instruction: string;
+  // Optional reference photo to send alongside the source for this edit.
+  referenceImageId?: string;
 }
 
 export interface ClaudeRefinePayload {

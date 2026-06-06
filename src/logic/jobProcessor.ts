@@ -15,7 +15,12 @@ import { bus, JOB_NUDGE } from "@/logic/events";
 import { analyzeImage } from "@/logic/imageAnalysis";
 import { createGate, DEFAULT_REFINE_BRIEF } from "@/logic/projectService";
 import { logger } from "@/lib/logger";
-import type { GeneratedImage } from "@/types/generation";
+import {
+  GeminiApiError,
+  NoImageError,
+  type GeneratedImage,
+  type ReferenceImage,
+} from "@/types/generation";
 import type {
   ClarifyPayload,
   ClaudeRefinePayload,
@@ -25,6 +30,11 @@ import type {
 
 const POLL_INTERVAL_MS = 2000;
 const DEFAULT_CANDIDATE_COUNT = 3;
+
+// Reference-image housekeeping: reap uploads that were never used (attached but
+// never submitted, or submitted without inserting the chip).
+const REFERENCE_SWEEP_INTERVAL_MS = 10 * 60 * 1000; // at most once per 10 min
+const REFERENCE_TTL_MS = Number(process.env.REFERENCE_IMAGE_TTL_MS) || 24 * 60 * 60 * 1000;
 
 // How many candidates to generate in the CHOOSING step. Override with
 // CANDIDATE_COUNT (e.g. 1 while testing to save tokens).
@@ -45,6 +55,7 @@ export class JobProcessor {
   private started = false;
   private ticking = false;
   private timer: NodeJS.Timeout | undefined;
+  private lastReferenceSweep = 0;
 
   start(): void {
     if (this.started) return;
@@ -66,6 +77,7 @@ export class JobProcessor {
         if (!job) break;
         await this.run(job);
       }
+      await this.maybeSweepReferences();
     } catch (err) {
       logger.error({ err: err instanceof Error ? err.message : String(err) }, "job tick failed");
     } finally {
@@ -97,9 +109,31 @@ export class JobProcessor {
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       logger.error({ jobId: job.id, type: job.type, err: message }, "job failed");
+      // Classify the failure so the UI can show a friendly "AI error" chip:
+      //  - NoImageError: the model returned no image (carries usage + reason).
+      //  - GeminiApiError: a transport failure (rate limit, auth, 5xx, …).
+      const isNoImage = err instanceof NoImageError;
+      const isApiError = err instanceof GeminiApiError;
+      const usage = isNoImage ? err.usage : undefined;
+      const failureReason = isNoImage
+        ? err.reason
+        : isApiError
+          ? `HTTP_${err.status}`
+          : undefined;
       await prisma.job.update({
         where: { id: job.id },
-        data: { status: JobStatus.error, finishedAt: new Date(), error: message },
+        data: {
+          status: JobStatus.error,
+          finishedAt: new Date(),
+          // For a no-image failure keep the model's own words (if any) as the
+          // detail; the friendly reason is derived in the UI from failureReason.
+          error: isNoImage ? (err.modelText ?? null) : message,
+          failureReason,
+          model: usage?.model,
+          inputTokens: usage?.inputTokens,
+          outputTokens: usage?.outputTokens,
+          costUsd: usage?.costUsd,
+        },
       });
       await prisma.project.update({
         where: { id: job.projectId },
@@ -166,6 +200,7 @@ export class JobProcessor {
   private async handleGenerate(job: Job): Promise<string[]> {
     const payload = job.payload as unknown as GeneratePayload;
     const generator = getImageGenerator();
+    const project = await prisma.project.findUnique({ where: { id: job.projectId } });
 
     // Synthesize a vivid prompt from the clarifying answers when needed, and
     // record it on the project so it's visible in the UI.
@@ -179,7 +214,10 @@ export class JobProcessor {
     }
     if (!prompt) prompt = payload.original ?? "";
 
-    const candidates = await generator.generateCandidates(prompt, candidateCount());
+    // The reference attached at project creation (if any) is reused for every
+    // generation round, including "try again". Loaded once for the whole fan-out.
+    const reference = await this.loadReference(project?.referenceImageId ?? undefined);
+    const candidates = await generator.generateCandidates(prompt, candidateCount(), reference);
     const groupId = randomUUID();
     const round = await this.nextRound(job.projectId);
 
@@ -193,6 +231,8 @@ export class JobProcessor {
           promptOrInstruction: prompt,
           candidateGroupId: groupId,
           roundIndex: round,
+          // Record the reference only when it was actually loaded and sent.
+          referenceImageId: reference ? (project?.referenceImageId ?? undefined) : undefined,
         }),
       );
     }
@@ -211,11 +251,18 @@ export class JobProcessor {
   }
 
   private async handleGeminiEdit(job: Job): Promise<string[]> {
-    const { sourceImageId, instruction } = job.payload as unknown as GeminiEditPayload;
+    const { sourceImageId, instruction, referenceImageId } =
+      job.payload as unknown as GeminiEditPayload;
     const source = await this.loadImage(sourceImageId);
     const sourceBytes = await getStorage().get(source.s3Key);
+    const reference = await this.loadReference(referenceImageId);
 
-    const edited = await getImageGenerator().editImage(sourceBytes, source.mimeType, instruction);
+    const edited = await getImageGenerator().editImage(
+      sourceBytes,
+      source.mimeType,
+      instruction,
+      reference,
+    );
     const round = await this.nextRound(job.projectId);
     const image = await this.persistImage(edited, {
       projectId: job.projectId,
@@ -224,6 +271,8 @@ export class JobProcessor {
       promptOrInstruction: instruction,
       parentImageId: sourceImageId,
       roundIndex: round,
+      // Record the reference only when it was actually loaded and sent.
+      referenceImageId: reference ? referenceImageId : undefined,
     });
 
     await prisma.project.update({
@@ -292,6 +341,7 @@ export class JobProcessor {
       parentImageId?: string;
       candidateGroupId?: string;
       roundIndex: number;
+      referenceImageId?: string;
     },
   ): Promise<Image> {
     // Tag export capabilities (shape/transparency) at generation time.
@@ -311,6 +361,7 @@ export class JobProcessor {
         parentImageId: meta.parentImageId,
         candidateGroupId: meta.candidateGroupId,
         roundIndex: meta.roundIndex,
+        referenceImageId: meta.referenceImageId,
         shapeAvailable: tags.shapeAvailable,
         transparentBgAvailable: tags.transparentBgAvailable,
         model: generated.usage?.model,
@@ -330,6 +381,61 @@ export class JobProcessor {
       throw new Error(`Image not found: ${imageId}`);
     }
     return image;
+  }
+
+  // Load an attached reference photo's bytes and mark it consumed so it survives
+  // sweeping. A missing row/object is non-fatal — we log and proceed text-only
+  // rather than failing the whole job.
+  private async loadReference(referenceImageId?: string): Promise<ReferenceImage | undefined> {
+    if (!referenceImageId) return undefined;
+    try {
+      const row = await prisma.referenceImage.findUnique({ where: { id: referenceImageId } });
+      if (!row || !row.s3Key) {
+        logger.warn({ referenceImageId }, "reference image not found; proceeding without it");
+        return undefined;
+      }
+      const data = await getStorage().get(row.s3Key);
+      if (!row.consumed) {
+        await prisma.referenceImage.update({
+          where: { id: row.id },
+          data: { consumed: true },
+        });
+      }
+      return { data, mimeType: row.mimeType };
+    } catch (err) {
+      logger.warn(
+        { referenceImageId, err: err instanceof Error ? err.message : String(err) },
+        "failed to load reference image; proceeding without it",
+      );
+      return undefined;
+    }
+  }
+
+  // Periodically reap un-consumed reference uploads older than the TTL (gated so
+  // it runs at most once per interval, not every tick).
+  private async maybeSweepReferences(): Promise<void> {
+    const now = Date.now();
+    if (now - this.lastReferenceSweep < REFERENCE_SWEEP_INTERVAL_MS) return;
+    this.lastReferenceSweep = now;
+
+    const cutoff = new Date(now - REFERENCE_TTL_MS);
+    const orphans = await prisma.referenceImage.findMany({
+      where: { consumed: false, createdAt: { lt: cutoff } },
+    });
+    if (orphans.length === 0) return;
+
+    for (const orphan of orphans) {
+      try {
+        if (orphan.s3Key) await getStorage().delete(orphan.s3Key);
+        await prisma.referenceImage.delete({ where: { id: orphan.id } });
+      } catch (err) {
+        logger.warn(
+          { referenceImageId: orphan.id, err: err instanceof Error ? err.message : String(err) },
+          "failed to sweep orphaned reference image",
+        );
+      }
+    }
+    logger.info({ count: orphans.length }, "swept orphaned reference images");
   }
 
   private async nextRound(projectId: string): Promise<number> {

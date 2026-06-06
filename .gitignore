@@ -29,6 +29,10 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+devserver.log
+
+# playwright mcp scratch
+/.playwright-mcp
 
 # env files (keep .env.example tracked)
 .env

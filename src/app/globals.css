@@ -84,10 +84,12 @@ body {
 }
 
 /* Form controls don't inherit `color` by default — set it explicitly so typed
-   text is the near-black brand ink (not the OS system color). */
+   text is the near-black brand ink (not the OS system color). The
+   contentEditable prompt editor needs the same treatment. */
 input,
 textarea,
-select {
+select,
+[data-prompt-editor] {
   color: var(--text-primary);
   background-color: var(--base);
 }
@@ -100,6 +102,13 @@ textarea::placeholder {
 ::selection {
   background: var(--accent-dim);
   color: var(--accent-pressed);
+}
+
+/* contentEditable has no native placeholder — show one while empty. */
+[data-prompt-editor][data-empty="true"]::before {
+  content: attr(data-placeholder);
+  color: var(--text-muted);
+  pointer-events: none;
 }
 
 :where(button, a, input, textarea, select, [tabindex]):focus-visible {

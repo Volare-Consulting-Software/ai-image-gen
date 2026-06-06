@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/Button";
+import { PromptEditor, type PromptEditorHandle } from "@/components/ui/PromptEditor";
+import { ReferenceImageField } from "@/components/ui/ReferenceImageField";
 
 // Quick-actions for the polish stage — image-quality refinements only. Output
 // concerns (format, size, transparency) are handled at download time, not here.
@@ -33,6 +35,11 @@ export function RefineLoopPanel({
   const [text, setText] = useState(initialText);
   const [open, setOpen] = useState(initialText.trim().length > 0);
   const [pending, startTransition] = useTransition();
+  const editorRef = useRef<PromptEditorHandle>(null);
+  const [referenceImageId, setReferenceImageId] = useState<string | null>(null);
+  // The reference photo (Gemini styling only) is sent only when the chip is in
+  // the prompt at submit time.
+  const supportsReference = variant === "style";
 
   const advanceAction = variant === "style" ? "happy" : "done";
   const moreAction = variant === "style" ? "more" : "refine";
@@ -97,17 +104,43 @@ export function RefineLoopPanel({
 
         {open && (
           <div className="flex flex-col gap-2">
-            <textarea
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-              rows={2}
-              placeholder={placeholder}
-              className="w-full resize-y rounded-lg border border-border bg-base p-2 text-base outline-none focus:border-accent"
-            />
+            {supportsReference ? (
+              <PromptEditor
+                ref={editorRef}
+                value={text}
+                onChange={setText}
+                rows={2}
+                placeholder={placeholder}
+                disabled={pending}
+              />
+            ) : (
+              <textarea
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={2}
+                placeholder={placeholder}
+                className="w-full resize-y rounded-lg border border-border bg-base p-2 text-base outline-none focus:border-accent"
+              />
+            )}
+            {supportsReference && (
+              <ReferenceImageField
+                editorRef={editorRef}
+                onReferenceChange={setReferenceImageId}
+                disabled={pending}
+              />
+            )}
             <div>
               <Button
                 disabled={pending || text.trim().length === 0}
-                onClick={() => post({ action: moreAction, suggestions: text })}
+                onClick={() =>
+                  post({
+                    action: moreAction,
+                    suggestions: text,
+                    ...(supportsReference && referenceImageId && editorRef.current?.hasChip()
+                      ? { referenceImageId }
+                      : {}),
+                  })
+                }
               >
                 Apply
               </Button>

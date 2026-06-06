@@ -11,6 +11,10 @@ model Project {
   // reference to Image.id (no FK constraint to avoid a Project<->Image cycle).
   selectedImageId String?
 
+  // Optional reference photo attached at project creation, reused by candidate
+  // generation (and "try again"). Soft reference to ReferenceImage.id.
+  referenceImageId String?
+
   createdAt DateTime @default(now()) @db.Timestamptz(6)
   updatedAt DateTime @updatedAt @db.Timestamptz(6)
 

@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
-import Image from "next/image";
 import Link from "next/link";
 import { Nunito } from "next/font/google";
+
+import { BrandMark } from "@/components/BrandMark";
 import "./globals.css";
 
 const nunito = Nunito({
@@ -28,14 +29,7 @@ export default function RootLayout({
         <header className="border-b border-border bg-surface">
           <div className="mx-auto flex max-w-5xl items-center justify-between px-6 py-3.5">
             <Link href="/" className="flex items-center gap-2.5">
-              <Image
-                src="/brand/logo-icon.png"
-                alt="Volare"
-                width={28}
-                height={28}
-                className="h-7 w-7 rounded-md"
-                priority
-              />
+              <BrandMark />
               <span className="text-lg font-extrabold tracking-tight">ai-image-gen</span>
             </Link>
           </div>
