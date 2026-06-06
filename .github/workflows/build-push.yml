@@ -2,7 +2,7 @@ name: build-and-push
 
 # CI composed from the org's public primitives: node-build-and-test
 # (framework CI) + push-container-image (docker build + GHCR push).
-# PRs run a verification image build (no push); main pushes publish
+# PRs run tests only; main pushes build and publish
 # :<run_number> and :latest to ghcr.io/volare-consulting-software/ai-image-gen.
 
 on:
@@ -29,8 +29,10 @@ jobs:
       - uses: actions/checkout@v4
       - uses: Volare-Consulting-Software/.github/.github/actions/node-build-and-test@main
 
+  # Image work runs on main pushes only; PRs never build or push images.
   image:
     needs: test
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     uses: Volare-Consulting-Software/.github/.github/workflows/push-container-image.yml@main
     permissions:
       contents: read
@@ -38,5 +40,4 @@ jobs:
       id-token: write
     secrets: inherit
     with:
-      push-image: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
       include-latest-tag: true
