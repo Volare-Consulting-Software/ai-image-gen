@@ -1,31 +1,42 @@
 name: build-and-push
 
-# ai-image-gen's caller of the org's reusable build-node-container-image
-# workflow. It lives in the PUBLIC Volare-Consulting-Software/.github repo (not
-# the private Volare.Build) so this public repo can reference it without exposing
-# the org's private CI/CD or depending on private-repo access settings.
-#
-# All the work (install → build → test → containerize → push to GHCR) lives in
-# the reusable workflow; this file just declares when to run and supplies inputs.
-# Image lands at ghcr.io/volare-consulting-software/ai-image-gen.
+# CI composed from the org's public primitives: node-build-and-test
+# (framework CI) + push-container-image (docker build + GHCR push).
+# PRs run a verification image build (no push); main pushes publish
+# :<run_number> and :latest to ghcr.io/volare-consulting-software/ai-image-gen.
 
 on:
   push:
     branches: [main]
-    tags: ["v*.*.*"]
     paths-ignore:
       - "**/*.md"
   pull_request:
     types: [opened, synchronize, reopened, ready_for_review]
   workflow_dispatch:
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  build-and-push:
-    uses: Volare-Consulting-Software/.github/.github/workflows/build-node-container-image.yml@main
+  test:
+    if: ${{ github.event_name != 'pull_request' || github.event.pull_request.draft == false }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: Volare-Consulting-Software/.github/.github/actions/node-build-and-test@main
+
+  image:
+    needs: test
+    uses: Volare-Consulting-Software/.github/.github/workflows/push-container-image.yml@main
     permissions:
       contents: read
       packages: write
+      id-token: write
+    secrets: inherit
     with:
-      # Build + test on every trigger; push to GHCR only on main pushes and
-      # v*.*.* tag pushes — never on PRs (no untrusted builds in the registry).
-      push-image: ${{ github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v')) }}
+      push-image: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
+      include-latest-tag: true
